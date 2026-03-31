@@ -1,0 +1,42 @@
+:root {
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  color: #111827;
+  background: linear-gradient(180deg, #f2f6fb 0%, #ffffff 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  max-width: 720px;
+  margin: 80px auto;
+  padding: 0 20px;
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 36px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.06);
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.card p {
+  margin: 0;
+  color: #4b5563;
+}
