@@ -1,4 +1,4 @@
-# G Frontend Template
+# Home Frontend Template
 
 React + Vite + TypeScript starter template for personal frontend projects.
 
@@ -33,7 +33,6 @@ src
 └── pages/
 ```
 
-## Next Extensions
-- Add API layer in `src/api`
-- Add domain modules in `src/domains`
-- Add router layouts in `src/pages`
+## Demo Flows
+- Login: `demo@home.io / home1234`
+- After login: Home screen with project list table
