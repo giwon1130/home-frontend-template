@@ -34,8 +34,10 @@ docker compose up --build
 
 - frontend: `http://localhost:4173`
 - backend: `http://localhost:8081`
+- assistant api: `http://localhost:8080`
 - frontend의 `/api/*` 요청은 nginx가 `giwon-home-api`로 프록시한다.
-- 현재 compose는 sibling repo `../giwon-home-api`를 함께 띄우는 기준이다.
+- frontend의 `/assistant-api/*` 요청은 nginx가 `giwon-assistant-api`로 프록시한다.
+- 현재 compose는 sibling repo `../giwon-home-api`, `../giwon-assistant-api`를 함께 띄우는 기준이다.
 
 ## Required Backend
 - Start backend API first: `http://localhost:8081`
@@ -77,7 +79,8 @@ VITE_ASSISTANT_API_BASE_URL=http://localhost:8080
 ```
 
 - 로컬 Vite 개발 서버에서는 `http://localhost:8081`을 그대로 쓴다.
-- Docker 이미지 빌드에서는 `/api`로 대체되어 nginx 프록시를 탄다.
+- 로컬 Vite 개발 서버에서는 `http://localhost:8080`도 함께 쓴다.
+- Docker 이미지 빌드에서는 `/api`, `/assistant-api`로 대체되어 nginx 프록시를 탄다.
 
 ## Future Services
 이 허브는 서비스 자체를 한 repo에 다 넣는 구조가 아니라, 독립 서비스들을 연결하는 공개 진입점으로 쓴다.
@@ -86,9 +89,10 @@ VITE_ASSISTANT_API_BASE_URL=http://localhost:8080
 - `giwon-home-api`의 프로젝트 카탈로그에 `liveUrl`, `repositoryUrl`, `docsUrl`을 추가한다.
 - 별도 도메인이나 URL이 있으면 `liveUrl`로 바로 연결한다.
 - 허브 도메인 아래에 reverse proxy로 붙이고 싶으면 `nginx.conf`와 `docker-compose.yml`에 서비스만 추가한다.
+- 프론트에서 별도 API를 직접 호출할 일이 있으면 `VITE_*_API_BASE_URL`로 분리한다.
 - 자세한 패턴은 [docs/service-onboarding.md](./docs/service-onboarding.md)에 정리했다.
 
 ## Notes
 - 공개 허브가 메인이고 로그인 기능은 보조 템플릿으로 남겨둔 상태다.
-- `docker-compose.yml`은 sibling repo `../giwon-home-api`를 기준으로 전체 스택을 함께 띄운다.
+- `docker-compose.yml`은 sibling repo `../giwon-home-api`, `../giwon-assistant-api`를 기준으로 전체 스택을 함께 띄운다.
 - 이후 서비스가 늘어나도 허브는 링크/프록시 진입점 역할만 유지하는 게 기본 원칙이다.

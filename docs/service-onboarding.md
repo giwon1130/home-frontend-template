@@ -63,6 +63,10 @@ location /services/my-service/ {
 }
 ```
 
+현재 예시:
+- `giwon-home-api`는 `/api/*`
+- `giwon-assistant-api`는 `/assistant-api/*`
+
 ## 4. 허브의 역할은 유지한다
 - 허브는 소개, 링크, 진입점 역할만 한다.
 - 서비스 비즈니스 로직은 각 서비스 repo에서 관리한다.
