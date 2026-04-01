@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createIdeaApi, getIdeasApi, getTodayBriefingApi, getTodayPlanApi } from '../api/assistantApi'
-import type { AssistantBriefing, AssistantIdea, AssistantPlan } from '../types/api'
+import { createIdeaApi, getBriefingHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayPlanApi } from '../api/assistantApi'
+import type { AssistantBriefing, AssistantBriefingHistory, AssistantIdea, AssistantPlan } from '../types/api'
 
 export function AssistantPage() {
   const [briefing, setBriefing] = useState<AssistantBriefing | null>(null)
+  const [briefingHistory, setBriefingHistory] = useState<AssistantBriefingHistory[]>([])
   const [plan, setPlan] = useState<AssistantPlan | null>(null)
   const [ideas, setIdeas] = useState<AssistantIdea[]>([])
   const [title, setTitle] = useState('')
@@ -13,11 +14,23 @@ export function AssistantPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const formatDateTime = (value: string) =>
+    new Date(value).toLocaleString('ko-KR', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+
   const loadAssistantData = () => {
-    Promise.all([getTodayBriefingApi(), getTodayPlanApi(), getIdeasApi()])
-      .then(([briefingResponse, planResponse, ideasResponse]) => {
+    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayPlanApi(), getIdeasApi()])
+      .then(([briefingResponse, historyResponse, planResponse, ideasResponse]) => {
         if (!briefingResponse.success || !briefingResponse.data) {
           throw new Error('briefing')
+        }
+
+        if (!historyResponse.success || !historyResponse.data) {
+          throw new Error('history')
         }
 
         if (!planResponse.success || !planResponse.data) {
@@ -29,6 +42,7 @@ export function AssistantPage() {
         }
 
         setBriefing(briefingResponse.data)
+        setBriefingHistory(historyResponse.data)
         setPlan(planResponse.data)
         setIdeas(ideasResponse.data)
         setErrorMessage('')
@@ -169,6 +183,44 @@ export function AssistantPage() {
                 {priority}
               </span>
             ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="assistant-grid">
+        <article className="assistant-card assistant-history-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Briefing History</p>
+              <h2>최근 브리핑 이력</h2>
+            </div>
+          </div>
+          <div className="briefing-history-list">
+            {briefingHistory.length === 0 ? (
+              <p className="assistant-summary">아직 저장된 브리핑 이력이 없어.</p>
+            ) : (
+              briefingHistory.map((history) => (
+                <article key={history.id} className="briefing-history-item">
+                  <div className="project-card-header">
+                    <div>
+                      <h3>{formatDateTime(history.generatedAt)}</h3>
+                      <span className="project-category">
+                        {history.weather.location} · {history.weather.condition} · {history.weather.temperatureCelsius}°C
+                      </span>
+                    </div>
+                    <span className="tag-chip">Saved</span>
+                  </div>
+                  <p className="project-summary">{history.summary}</p>
+                  <ul className="assistant-list compact-list">
+                    {history.tasks.slice(0, 2).map((task) => (
+                      <li key={`${history.id}-${task.priority}-${task.title}`}>
+                        <strong>{task.priority}</strong> {task.title}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))
+            )}
           </div>
         </article>
       </section>

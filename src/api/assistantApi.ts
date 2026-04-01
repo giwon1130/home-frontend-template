@@ -1,8 +1,12 @@
 import { assistantApiFetch } from './client'
-import type { ApiResponse, AssistantBriefing, AssistantIdea, AssistantPlan } from '../types/api'
+import type { ApiResponse, AssistantBriefing, AssistantBriefingHistory, AssistantIdea, AssistantPlan } from '../types/api'
 
 export function getTodayBriefingApi() {
   return assistantApiFetch<ApiResponse<AssistantBriefing>>('/api/v1/briefings/today')
+}
+
+export function getBriefingHistoryApi() {
+  return assistantApiFetch<ApiResponse<AssistantBriefingHistory[]>>('/api/v1/briefings/history')
 }
 
 export function getTodayPlanApi() {

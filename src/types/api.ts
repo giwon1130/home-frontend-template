@@ -40,6 +40,31 @@ export type Profile = {
 }
 
 export type AssistantBriefing = {
+  id?: string
+  generatedAt: string
+  summary: string
+  weather: {
+    location: string
+    condition: string
+    temperatureCelsius: number
+  }
+  calendar: Array<{
+    time: string
+    title: string
+  }>
+  headlines: Array<{
+    source: string
+    title: string
+  }>
+  tasks: Array<{
+    priority: string
+    title: string
+  }>
+  focusSuggestion: string
+}
+
+export type AssistantBriefingHistory = {
+  id: string
   generatedAt: string
   summary: string
   weather: {
