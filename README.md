@@ -1,6 +1,6 @@
 # Home Frontend Template
 
-React + Vite + TypeScript starter template for personal frontend projects.
+공개용 프로젝트 허브와 자기소개 페이지를 위한 React + Vite + TypeScript 프론트엔드입니다.
 
 ## Stack
 - React 18
@@ -9,10 +9,10 @@ React + Vite + TypeScript starter template for personal frontend projects.
 - Vitest + Testing Library
 
 ## What Included
-- Login page with demo credential autofill
-- Auth context with token persistence (`localStorage`)
-- Protected route for home page
-- Home page project table from backend API
+- 공개 홈 화면
+- About 페이지
+- 백엔드 `profile/projects` API 연동
+- 기존 로그인 페이지는 템플릿 용도로 유지
 
 ## Quick Start
 ```bash
@@ -48,13 +48,10 @@ src
 └── types/
 ```
 
-## Demo Flows
-- Login: `demo@home.io / home1234`
-- After login: Home screen with project list table
-
 ## Routes
+- `/`: public home hub
+- `/about`: public about page
 - `/login`: login form
-- `/`: protected home page (project list)
 
 ## Environment
 `.env.example`
@@ -64,5 +61,4 @@ VITE_API_BASE_URL=http://localhost:8081
 ```
 
 ## Notes
-- This template intentionally keeps auth simple for bootstrap speed.
-- Replace token handling with stronger auth strategy when moving to production.
+- 공개 허브가 메인이고 로그인 기능은 보조 템플릿으로 남겨둔 상태다.

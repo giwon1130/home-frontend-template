@@ -23,4 +23,17 @@ export type Project = {
   id: string
   name: string
   status: string
+  category: string
+  summary: string
+  primaryUrl: string
+  repositoryUrl: string | null
+  tags: string[]
+}
+
+export type Profile = {
+  name: string
+  title: string
+  summary: string
+  strengths: string[]
+  links: Record<string, string>
 }

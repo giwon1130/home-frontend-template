@@ -1,46 +1,78 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { getProfileApi } from '../api/profileApi'
 import { getProjectsApi } from '../api/projectApi'
-import { useAuth } from '../auth/AuthContext'
-import { ProjectTable } from '../components/ProjectTable'
-import type { Project } from '../types/api'
+import { ProjectGrid } from '../components/ProjectGrid'
+import type { Profile, Project } from '../types/api'
 
 export function HomePage() {
-  const appName = import.meta.env.VITE_APP_NAME ?? 'home-frontend-template'
-  const { token, user, logout } = useAuth()
+  const appName = import.meta.env.VITE_APP_NAME ?? 'home'
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
-    if (!token) return
-
-    getProjectsApi(token)
-      .then((response) => {
-        if (!response.success || !response.data) {
-          setErrorMessage(response.message ?? '프로젝트 조회에 실패했습니다.')
+    Promise.all([getProfileApi(), getProjectsApi()])
+      .then(([profileResponse, projectResponse]) => {
+        if (!profileResponse.success || !profileResponse.data) {
+          setErrorMessage(profileResponse.message ?? '프로필 조회에 실패했습니다.')
           return
         }
 
-        setProjects(response.data)
+        if (!projectResponse.success || !projectResponse.data) {
+          setErrorMessage(projectResponse.message ?? '프로젝트 조회에 실패했습니다.')
+          return
+        }
+
+        setProfile(profileResponse.data)
+        setProjects(projectResponse.data)
       })
       .catch(() => {
-        setErrorMessage('프로젝트 조회에 실패했습니다.')
+        setErrorMessage('홈 데이터를 불러오지 못했습니다.')
       })
-  }, [token])
+  }, [])
 
   return (
-    <main className="container">
-      <header className="home-header">
-        <div>
-          <h1>{appName}</h1>
-          <p className="home-subtitle">{user ? `${user.name}님 환영합니다.` : 'Project Home'}</p>
+    <main className="page-shell">
+      <header className="hero-section">
+        <div className="hero-copy-block">
+          <p className="eyebrow">{appName}</p>
+          <h1>{profile?.title ?? 'Public Service Hub'}</h1>
+          <p className="hero-summary">
+            {profile?.summary ?? '개인 프로젝트와 공개 저장소를 한 곳에서 연결하는 공개 허브'}
+          </p>
+          <div className="hero-actions">
+            <Link className="primary-link" to="/about">
+              About Me
+            </Link>
+            {profile?.links.github ? (
+              <a className="secondary-link" href={profile.links.github} target="_blank" rel="noreferrer">
+                GitHub
+              </a>
+            ) : null}
+          </div>
         </div>
-        <button type="button" onClick={logout}>
-          로그아웃
-        </button>
+        <div className="hero-side-card">
+          <span className="control-label">핵심 강점</span>
+          <ul className="strength-list">
+            {profile?.strengths.map((strength) => (
+              <li key={strength}>{strength}</li>
+            ))}
+          </ul>
+        </div>
       </header>
 
       {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-      <ProjectTable projects={projects} />
+
+      <section className="section-block">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Projects</p>
+            <h2>대표 프로젝트</h2>
+          </div>
+        </div>
+        <ProjectGrid projects={projects} />
+      </section>
     </main>
   )
 }
