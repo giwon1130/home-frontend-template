@@ -1,0 +1,18 @@
+services:
+  giwon-home-api:
+    build:
+      context: ../giwon-home-api
+    container_name: giwon-home-api
+    ports:
+      - "8081:8081"
+
+  giwon-home:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: giwon-home
+    depends_on:
+      - giwon-home-api
+    ports:
+      - "4173:80"

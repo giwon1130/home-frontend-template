@@ -35,12 +35,19 @@ export function ProjectGrid({ projects }: ProjectGridProps) {
             ))}
           </div>
           <div className="project-links">
-            <a href={project.primaryUrl} target="_blank" rel="noreferrer">
-              Open
-            </a>
+            {project.liveUrl ? (
+              <a href={project.liveUrl} target="_blank" rel="noreferrer">
+                Live
+              </a>
+            ) : null}
             {project.repositoryUrl ? (
               <a href={project.repositoryUrl} target="_blank" rel="noreferrer">
                 Repository
+              </a>
+            ) : null}
+            {project.docsUrl ? (
+              <a href={project.docsUrl} target="_blank" rel="noreferrer">
+                Docs
               </a>
             ) : null}
           </div>

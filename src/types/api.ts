@@ -25,8 +25,9 @@ export type Project = {
   status: string
   category: string
   summary: string
-  primaryUrl: string
+  liveUrl: string | null
   repositoryUrl: string | null
+  docsUrl: string | null
   tags: string[]
 }
 
