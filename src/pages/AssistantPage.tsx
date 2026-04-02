@@ -116,6 +116,8 @@ export function AssistantPage() {
   const recentIdeasCount = ideas.filter((idea) => idea.status === 'OPEN' || idea.status === 'IN_PROGRESS').length
   const filteredIdeas =
     ideaFilter === 'ALL' ? ideas : ideas.filter((idea) => idea.status === ideaFilter)
+  const uniqueHeadlineSources = new Set((briefing?.headlines ?? []).map((headline) => headline.source)).size
+  const leadHeadline = briefing?.headlines[0] ?? latestHistory?.headlines[0] ?? null
 
   const handleIdeaStatusChange = async (ideaId: string, status: 'OPEN' | 'IN_PROGRESS' | 'DONE') => {
     setUpdatingIdeaId(ideaId)
@@ -237,9 +239,9 @@ export function AssistantPage() {
           <p>시간 블록 기준으로 정리된 오늘 계획</p>
         </article>
         <article className="assistant-stat-card">
-          <span className="control-label">Saved Briefings</span>
-          <strong>{briefingHistory.length}</strong>
-          <p>최근에 저장된 브리핑 이력</p>
+          <span className="control-label">Headline Sources</span>
+          <strong>{uniqueHeadlineSources}</strong>
+          <p>오늘 브리핑에 반영된 뉴스 소스 수</p>
         </article>
         <article className="assistant-stat-card">
           <span className="control-label">Ideas</span>
@@ -259,6 +261,13 @@ export function AssistantPage() {
           <p className="assistant-summary">
             {briefing ? briefing.summary : isLoading ? '브리핑을 불러오는 중' : '브리핑 정보 없음'}
           </p>
+          {leadHeadline ? (
+            <div className="assistant-news-highlight">
+              <span className="control-label">Lead Headline</span>
+              <strong>{leadHeadline.title}</strong>
+              <p>{leadHeadline.source}</p>
+            </div>
+          ) : null}
           <div className="assistant-subgrid">
             <div>
               <span className="control-label">Calendar</span>
@@ -362,6 +371,14 @@ export function AssistantPage() {
                     </span>
                   ))}
                 </div>
+                {leadHeadline ? (
+                  <div className="assistant-secondary-section">
+                    <span className="control-label">Lead Signal</span>
+                    <p className="assistant-detail-text">
+                      {leadHeadline.title} <strong>· {leadHeadline.source}</strong>
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

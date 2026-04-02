@@ -440,6 +440,25 @@ a {
   font-size: 14px;
 }
 
+.assistant-news-highlight {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(14, 165, 233, 0.08));
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.assistant-news-highlight strong {
+  display: block;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.assistant-news-highlight p {
+  margin: 8px 0 0;
+  color: #475569;
+}
+
 .assistant-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
