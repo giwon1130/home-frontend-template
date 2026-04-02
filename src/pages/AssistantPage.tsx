@@ -17,6 +17,10 @@ export function AssistantPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null)
   const [expandedIdeaId, setExpandedIdeaId] = useState<string | null>(null)
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const [editingRawText, setEditingRawText] = useState('')
+  const [editingTags, setEditingTags] = useState('')
   const [ideaFilter, setIdeaFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'DONE'>('ALL')
   const [updatingIdeaId, setUpdatingIdeaId] = useState<string | null>(null)
 
@@ -129,6 +133,53 @@ export function AssistantPage() {
       setErrorMessage('')
     } catch {
       setErrorMessage('아이디어 상태 변경에 실패했습니다.')
+    } finally {
+      setUpdatingIdeaId(null)
+    }
+  }
+
+  const startIdeaEdit = (idea: AssistantIdea) => {
+    setEditingIdeaId(idea.id)
+    setEditingTitle(idea.title)
+    setEditingRawText(idea.rawText)
+    setEditingTags(idea.tags.join(', '))
+    setExpandedIdeaId(idea.id)
+  }
+
+  const resetIdeaEdit = () => {
+    setEditingIdeaId(null)
+    setEditingTitle('')
+    setEditingRawText('')
+    setEditingTags('')
+  }
+
+  const handleIdeaEditSave = async (ideaId: string) => {
+    if (!editingTitle.trim() || !editingRawText.trim()) {
+      setErrorMessage('아이디어 제목과 내용을 입력해줘.')
+      return
+    }
+
+    setUpdatingIdeaId(ideaId)
+
+    try {
+      const response = await updateIdeaApi(ideaId, {
+        title: editingTitle.trim(),
+        rawText: editingRawText.trim(),
+        tags: editingTags
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+      })
+
+      if (!response.success || !response.data) {
+        throw new Error('edit')
+      }
+
+      setIdeas((previous) => previous.map((idea) => (idea.id === ideaId ? response.data! : idea)))
+      resetIdeaEdit()
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('아이디어 수정에 실패했습니다.')
     } finally {
       setUpdatingIdeaId(null)
     }
@@ -478,6 +529,13 @@ export function AssistantPage() {
                     <button
                       className="history-toggle-button"
                       type="button"
+                      onClick={() => startIdeaEdit(idea)}
+                    >
+                      수정
+                    </button>
+                    <button
+                      className="history-toggle-button"
+                      type="button"
                       onClick={() => setExpandedIdeaId((current) => (current === idea.id ? null : idea.id))}
                     >
                       {expandedIdeaId === idea.id ? '간단히 보기' : '상세 보기'}
@@ -487,7 +545,41 @@ export function AssistantPage() {
                     <div className="history-detail-grid">
                       <div>
                         <span className="control-label">Raw Text</span>
-                        <p className="assistant-detail-text">{idea.rawText}</p>
+                        {editingIdeaId === idea.id ? (
+                          <div className="idea-edit-form">
+                            <label>
+                              제목
+                              <input value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} />
+                            </label>
+                            <label>
+                              내용
+                              <textarea
+                                rows={6}
+                                value={editingRawText}
+                                onChange={(event) => setEditingRawText(event.target.value)}
+                              />
+                            </label>
+                            <label>
+                              태그
+                              <input value={editingTags} onChange={(event) => setEditingTags(event.target.value)} />
+                            </label>
+                            <div className="idea-card-actions">
+                              <button
+                                className="primary-button"
+                                type="button"
+                                disabled={updatingIdeaId === idea.id}
+                                onClick={() => handleIdeaEditSave(idea.id)}
+                              >
+                                {updatingIdeaId === idea.id ? '저장 중...' : '저장'}
+                              </button>
+                              <button className="secondary-link action-button" type="button" onClick={resetIdeaEdit}>
+                                취소
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="assistant-detail-text">{idea.rawText}</p>
+                        )}
                       </div>
                       <div>
                         <span className="control-label">Suggested Actions</span>

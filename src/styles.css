@@ -466,6 +466,28 @@ a {
   background: #ffffff;
 }
 
+.idea-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.idea-edit-form label {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.idea-edit-form input,
+.idea-edit-form textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 16px;
+  padding: 12px 14px;
+  font: inherit;
+  background: #ffffff;
+}
+
 .idea-archive {
   display: grid;
   gap: 14px;
