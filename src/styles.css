@@ -471,6 +471,41 @@ a {
   gap: 14px;
 }
 
+.idea-filter-group,
+.idea-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.idea-card-actions {
+  margin-top: 14px;
+  align-items: center;
+}
+
+.filter-chip {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #ffffff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filter-chip.active {
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
+}
+
+.filter-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .briefing-history-list {
   display: grid;
   gap: 14px;
@@ -503,6 +538,13 @@ a {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 16px;
+}
+
+.assistant-detail-text {
+  margin: 0;
+  color: #475569;
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
 
 .idea-card {

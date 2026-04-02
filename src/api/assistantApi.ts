@@ -23,3 +23,13 @@ export function createIdeaApi(payload: { title: string; rawText: string; tags: s
     body: JSON.stringify(payload),
   })
 }
+
+export function updateIdeaApi(
+  ideaId: string,
+  payload: { title?: string; rawText?: string; tags?: string[]; status?: string },
+) {
+  return assistantApiFetch<ApiResponse<AssistantIdea>>(`/api/v1/ideas/${ideaId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}

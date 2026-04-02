@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createIdeaApi, getBriefingHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayPlanApi } from '../api/assistantApi'
+import { createIdeaApi, getBriefingHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayPlanApi, updateIdeaApi } from '../api/assistantApi'
 import type { AssistantBriefing, AssistantBriefingHistory, AssistantIdea, AssistantPlan } from '../types/api'
 
 export function AssistantPage() {
@@ -16,6 +16,9 @@ export function AssistantPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null)
+  const [expandedIdeaId, setExpandedIdeaId] = useState<string | null>(null)
+  const [ideaFilter, setIdeaFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'DONE'>('ALL')
+  const [updatingIdeaId, setUpdatingIdeaId] = useState<string | null>(null)
 
   const formatDateTime = (value: string) =>
     new Date(value).toLocaleString('ko-KR', {
@@ -107,6 +110,29 @@ export function AssistantPage() {
 
   const latestHistory = briefingHistory[0]
   const recentIdeasCount = ideas.filter((idea) => idea.status === 'OPEN' || idea.status === 'IN_PROGRESS').length
+  const filteredIdeas =
+    ideaFilter === 'ALL' ? ideas : ideas.filter((idea) => idea.status === ideaFilter)
+
+  const handleIdeaStatusChange = async (ideaId: string, status: 'OPEN' | 'IN_PROGRESS' | 'DONE') => {
+    setUpdatingIdeaId(ideaId)
+
+    try {
+      const response = await updateIdeaApi(ideaId, { status })
+
+      if (!response.success || !response.data) {
+        throw new Error('update')
+      }
+
+      setIdeas((previous) =>
+        previous.map((idea) => (idea.id === ideaId ? response.data! : idea))
+      )
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('아이디어 상태 변경에 실패했습니다.')
+    } finally {
+      setUpdatingIdeaId(null)
+    }
+  }
 
   return (
     <main className="page-shell">
@@ -398,16 +424,29 @@ export function AssistantPage() {
               <p className="eyebrow">Idea Archive</p>
               <h2>저장된 아이디어</h2>
             </div>
+            <div className="idea-filter-group">
+              {(['ALL', 'OPEN', 'IN_PROGRESS', 'DONE'] as const).map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className={`filter-chip ${ideaFilter === status ? 'active' : ''}`}
+                  onClick={() => setIdeaFilter(status)}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="idea-archive">
-            {ideas.length === 0 ? (
+            {filteredIdeas.length === 0 ? (
               <p className="assistant-summary">아직 저장된 아이디어가 없어.</p>
             ) : (
-              ideas.map((idea) => (
+              filteredIdeas.map((idea) => (
                 <article key={idea.id} className="idea-card">
                   <div className="project-card-header">
                     <div>
                       <h3>{idea.title}</h3>
+                      <span className="project-category">{formatDateTime(idea.updatedAt)}</span>
                     </div>
                     <span className={`project-status ${idea.status.toLowerCase()}`}>{idea.status}</span>
                   </div>
@@ -424,6 +463,42 @@ export function AssistantPage() {
                       <li key={point}>{point}</li>
                     ))}
                   </ul>
+                  <div className="idea-card-actions">
+                    {(['OPEN', 'IN_PROGRESS', 'DONE'] as const).map((status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        className={`filter-chip ${idea.status === status ? 'active' : ''}`}
+                        disabled={updatingIdeaId === idea.id}
+                        onClick={() => handleIdeaStatusChange(idea.id, status)}
+                      >
+                        {updatingIdeaId === idea.id && idea.status !== status ? '변경 중...' : status}
+                      </button>
+                    ))}
+                    <button
+                      className="history-toggle-button"
+                      type="button"
+                      onClick={() => setExpandedIdeaId((current) => (current === idea.id ? null : idea.id))}
+                    >
+                      {expandedIdeaId === idea.id ? '간단히 보기' : '상세 보기'}
+                    </button>
+                  </div>
+                  {expandedIdeaId === idea.id ? (
+                    <div className="history-detail-grid">
+                      <div>
+                        <span className="control-label">Raw Text</span>
+                        <p className="assistant-detail-text">{idea.rawText}</p>
+                      </div>
+                      <div>
+                        <span className="control-label">Suggested Actions</span>
+                        <ul className="assistant-list compact-list">
+                          {idea.suggestedActions.map((action) => (
+                            <li key={`${idea.id}-${action}`}>{action}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ) : null}
                 </article>
               ))
             )}
