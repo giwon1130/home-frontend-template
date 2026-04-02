@@ -5,6 +5,12 @@ type ProjectGridProps = {
 }
 
 export function ProjectGrid({ projects }: ProjectGridProps) {
+  const statusLabel = {
+    LIVE: 'Live',
+    BUILDING: 'Building',
+    PLANNING: 'Planning',
+  } as const
+
   const sortedProjects = [...projects].sort((left, right) => {
     const priority = {
       LIVE: 0,
@@ -24,9 +30,15 @@ export function ProjectGrid({ projects }: ProjectGridProps) {
               <span className="project-category">{project.category}</span>
               <h3>{project.name}</h3>
             </div>
-            <span className={`project-status ${project.status.toLowerCase()}`}>{project.status}</span>
+            <span className={`project-status ${project.status.toLowerCase()}`}>
+              {statusLabel[project.status as keyof typeof statusLabel] ?? project.status}
+            </span>
           </div>
           <p className="project-summary">{project.summary}</p>
+          <div className="project-meta">
+            <span>{project.tags.length} tags</span>
+            <span>{project.liveUrl ? '실행 링크 있음' : '저장소 중심'}</span>
+          </div>
           <div className="tag-list">
             {project.tags.map((tag) => (
               <span key={tag} className="tag-chip">

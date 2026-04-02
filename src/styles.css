@@ -213,6 +213,15 @@ a {
   line-height: 1.7;
 }
 
+.project-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  color: #64748b;
+  font-size: 13px;
+}
+
 .tag-list {
   display: flex;
   flex-wrap: wrap;
