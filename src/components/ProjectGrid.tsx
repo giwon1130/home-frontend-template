@@ -11,6 +11,22 @@ export function ProjectGrid({ projects }: ProjectGridProps) {
     PLANNING: 'Planning',
   } as const
 
+  const projectAccessText = (project: Project) => {
+    if (project.liveUrl) {
+      return '바로 확인 가능'
+    }
+
+    if (project.repositoryUrl && project.docsUrl) {
+      return '코드와 참고 링크 제공'
+    }
+
+    if (project.repositoryUrl) {
+      return '저장소 중심'
+    }
+
+    return '준비 중'
+  }
+
   const sortedProjects = [...projects].sort((left, right) => {
     const priority = {
       LIVE: 0,
@@ -37,7 +53,7 @@ export function ProjectGrid({ projects }: ProjectGridProps) {
           <p className="project-summary">{project.summary}</p>
           <div className="project-meta">
             <span>{project.tags.length} tags</span>
-            <span>{project.liveUrl ? '실행 링크 있음' : '저장소 중심'}</span>
+            <span>{projectAccessText(project)}</span>
           </div>
           <div className="tag-list">
             {project.tags.map((tag) => (

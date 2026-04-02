@@ -40,6 +40,8 @@ export function HomePage() {
       return right.tags.length - left.tags.length
     })
     .slice(0, 3)
+  const featuredProjectIds = new Set(featuredProjects.map((project) => project.id))
+  const remainingProjects = projects.filter((project) => !featuredProjectIds.has(project.id))
 
   useEffect(() => {
     Promise.all([getProfileApi(), getProjectsApi()])
@@ -190,11 +192,11 @@ export function HomePage() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">Projects</p>
-            <h2>대표 프로젝트</h2>
+            <h2>전체 프로젝트</h2>
           </div>
-          <p className="section-note">공개 저장소와 연결 상태를 기준으로 전체 프로젝트를 정리했다.</p>
+          <p className="section-note">대표 섹션 아래에서 나머지 프로젝트를 정리해 보여준다.</p>
         </div>
-        <ProjectGrid projects={projects} />
+        <ProjectGrid projects={remainingProjects} />
       </section>
     </main>
   )
