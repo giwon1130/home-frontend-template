@@ -14,7 +14,7 @@ function projectPriority(project: Project) {
     return 1
   }
 
-  if (project.name === 'HomeHarmony' || project.name === 'TripMemo') {
+  if (project.name === 'HomeHarmony' || project.name === 'TripMemo' || project.name === 'MetroPulse') {
     return 2
   }
 
@@ -148,7 +148,7 @@ export function HomePage() {
             <p className="eyebrow">Start Here</p>
             <h2>지금 보기 좋은 프로젝트</h2>
           </div>
-          <p className="section-note">최근 완성도가 높거나 바로 탐색하기 좋은 프로젝트를 먼저 보여준다.</p>
+          <p className="section-note">최근 완성도가 높거나 탐색 흐름이 좋은 프로젝트를 먼저 보여준다.</p>
         </div>
         <div className="featured-project-grid">
           {featuredProjects.map((project) => (
