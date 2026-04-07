@@ -139,3 +139,13 @@ export type AssistantCopilotAskResponse = {
   source: string
   generatedAt: string
 }
+
+export type AssistantCopilotHistory = {
+  id: string
+  question: string
+  answer: string
+  reasoning: string[]
+  suggestedActions: string[]
+  source: string
+  generatedAt: string
+}

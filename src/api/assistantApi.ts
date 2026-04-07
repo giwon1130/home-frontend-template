@@ -5,6 +5,7 @@ import type {
   AssistantBriefingHistory,
   AssistantCopilot,
   AssistantCopilotAskResponse,
+  AssistantCopilotHistory,
   AssistantIdea,
   AssistantPlan,
 } from '../types/api'
@@ -23,6 +24,10 @@ export function getTodayPlanApi() {
 
 export function getTodayCopilotApi() {
   return assistantApiFetch<ApiResponse<AssistantCopilot>>('/api/v1/copilot/today')
+}
+
+export function getCopilotHistoryApi() {
+  return assistantApiFetch<ApiResponse<AssistantCopilotHistory[]>>('/api/v1/copilot/history')
 }
 
 export function askCopilotApi(question: string) {

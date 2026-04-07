@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { askCopilotApi, createIdeaApi, getBriefingHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, updateIdeaApi } from '../api/assistantApi'
-import type { AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantIdea, AssistantPlan } from '../types/api'
+import { askCopilotApi, createIdeaApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, updateIdeaApi } from '../api/assistantApi'
+import type { AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan } from '../types/api'
 
 export function AssistantPage() {
   const suggestedQuestions = [
@@ -13,6 +13,7 @@ export function AssistantPage() {
   const [briefing, setBriefing] = useState<AssistantBriefing | null>(null)
   const [briefingHistory, setBriefingHistory] = useState<AssistantBriefingHistory[]>([])
   const [copilot, setCopilot] = useState<AssistantCopilot | null>(null)
+  const [copilotHistory, setCopilotHistory] = useState<AssistantCopilotHistory[]>([])
   const [plan, setPlan] = useState<AssistantPlan | null>(null)
   const [ideas, setIdeas] = useState<AssistantIdea[]>([])
   const [title, setTitle] = useState('')
@@ -49,8 +50,8 @@ export function AssistantPage() {
       setIsLoading(true)
     }
 
-    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getTodayPlanApi(), getIdeasApi()])
-      .then(([briefingResponse, historyResponse, copilotResponse, planResponse, ideasResponse]) => {
+    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi()])
+      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse]) => {
         if (!briefingResponse.success || !briefingResponse.data) {
           throw new Error('briefing')
         }
@@ -61,6 +62,10 @@ export function AssistantPage() {
 
         if (!copilotResponse.success || !copilotResponse.data) {
           throw new Error('copilot')
+        }
+
+        if (!copilotHistoryResponse.success || !copilotHistoryResponse.data) {
+          throw new Error('copilot-history')
         }
 
         if (!planResponse.success || !planResponse.data) {
@@ -74,6 +79,7 @@ export function AssistantPage() {
         setBriefing(briefingResponse.data)
         setBriefingHistory(historyResponse.data)
         setCopilot(copilotResponse.data)
+        setCopilotHistory(copilotHistoryResponse.data)
         setPlan(planResponse.data)
         setIdeas(ideasResponse.data)
         setErrorMessage('')
@@ -145,6 +151,18 @@ export function AssistantPage() {
       }
 
       setCopilotAnswer(response.data)
+      setCopilotHistory((previous) => [
+        {
+          id: `${response.data.generatedAt}-${response.data.question}`,
+          question: response.data.question,
+          answer: response.data.answer,
+          reasoning: response.data.reasoning,
+          suggestedActions: response.data.suggestedActions,
+          source: response.data.source,
+          generatedAt: response.data.generatedAt,
+        },
+        ...previous,
+      ].slice(0, 10))
       setQuestion('')
       setErrorMessage('')
     } catch {
@@ -227,6 +245,11 @@ export function AssistantPage() {
     } finally {
       setUpdatingIdeaId(null)
     }
+  }
+
+  const handleReuseQuestion = (value: string) => {
+    setQuestion(value)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (
@@ -443,6 +466,60 @@ export function AssistantPage() {
                 <li>추가 리마인더 없음</li>
               )}
             </ul>
+          </div>
+        </article>
+      </section>
+
+      <section className="assistant-grid">
+        <article className="assistant-card assistant-history-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Copilot History</p>
+              <h2>최근 질문 이력</h2>
+            </div>
+          </div>
+          <div className="briefing-history-list">
+            {copilotHistory.length === 0 ? (
+              <p className="assistant-summary">아직 저장된 질문 이력이 없어.</p>
+            ) : (
+              copilotHistory.map((item) => (
+                <article key={item.id} className="briefing-history-item">
+                  <div className="project-card-header">
+                    <div>
+                      <h3>{item.question}</h3>
+                      <span className="project-category">{formatDateTime(item.generatedAt)}</span>
+                    </div>
+                    <span className="tag-chip">{item.source}</span>
+                  </div>
+                  <p className="project-summary">{item.answer}</p>
+                  <button
+                    className="history-toggle-button"
+                    type="button"
+                    onClick={() => handleReuseQuestion(item.question)}
+                  >
+                    다시 질문하기
+                  </button>
+                  <div className="history-detail-grid">
+                    <div>
+                      <span className="control-label">Reasoning</span>
+                      <ul className="assistant-list compact-list">
+                        {item.reasoning.map((reason) => (
+                          <li key={`${item.id}-${reason}`}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <span className="control-label">Suggested Actions</span>
+                      <ul className="assistant-list compact-list">
+                        {item.suggestedActions.map((action) => (
+                          <li key={`${item.id}-${action}`}>{action}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
           </div>
         </article>
       </section>
