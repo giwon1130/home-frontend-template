@@ -14,7 +14,7 @@ function projectPriority(project: Project) {
     return 1
   }
 
-  if (project.name === 'HomeHarmony' || project.name === 'TripMemo' || project.name === 'MetroPulse') {
+  if (project.name === 'RouteOps' || project.name === 'HomeHarmony' || project.name === 'TripMemo' || project.name === 'MetroPulse') {
     return 2
   }
 
