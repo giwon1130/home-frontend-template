@@ -575,6 +575,12 @@ export function AssistantPage() {
                 <p className="assistant-detail-text">{copilotAnswer.question}</p>
                 <span className="control-label">Answer</span>
                 <p className="assistant-detail-text">{copilotAnswer.answer}</p>
+                {copilotAnswer.fallbackReason ? (
+                  <>
+                    <span className="control-label">Fallback Reason</span>
+                    <p className="assistant-detail-text">{copilotAnswer.fallbackReason}</p>
+                  </>
+                ) : null}
               </div>
               <div className="assistant-subgrid assistant-copilot-subgrid">
                 <div>

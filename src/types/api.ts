@@ -137,6 +137,7 @@ export type AssistantCopilotAskResponse = {
   reasoning: string[]
   suggestedActions: string[]
   source: string
+  fallbackReason?: string | null
   generatedAt: string
 }
 
