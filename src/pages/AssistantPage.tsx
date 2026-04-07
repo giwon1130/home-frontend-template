@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createIdeaApi, getBriefingHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayPlanApi, updateIdeaApi } from '../api/assistantApi'
-import type { AssistantBriefing, AssistantBriefingHistory, AssistantIdea, AssistantPlan } from '../types/api'
+import { createIdeaApi, getBriefingHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, updateIdeaApi } from '../api/assistantApi'
+import type { AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantIdea, AssistantPlan } from '../types/api'
 
 export function AssistantPage() {
   const [briefing, setBriefing] = useState<AssistantBriefing | null>(null)
   const [briefingHistory, setBriefingHistory] = useState<AssistantBriefingHistory[]>([])
+  const [copilot, setCopilot] = useState<AssistantCopilot | null>(null)
   const [plan, setPlan] = useState<AssistantPlan | null>(null)
   const [ideas, setIdeas] = useState<AssistantIdea[]>([])
   const [title, setTitle] = useState('')
@@ -39,14 +40,18 @@ export function AssistantPage() {
       setIsLoading(true)
     }
 
-    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayPlanApi(), getIdeasApi()])
-      .then(([briefingResponse, historyResponse, planResponse, ideasResponse]) => {
+    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getTodayPlanApi(), getIdeasApi()])
+      .then(([briefingResponse, historyResponse, copilotResponse, planResponse, ideasResponse]) => {
         if (!briefingResponse.success || !briefingResponse.data) {
           throw new Error('briefing')
         }
 
         if (!historyResponse.success || !historyResponse.data) {
           throw new Error('history')
+        }
+
+        if (!copilotResponse.success || !copilotResponse.data) {
+          throw new Error('copilot')
         }
 
         if (!planResponse.success || !planResponse.data) {
@@ -59,6 +64,7 @@ export function AssistantPage() {
 
         setBriefing(briefingResponse.data)
         setBriefingHistory(historyResponse.data)
+        setCopilot(copilotResponse.data)
         setPlan(planResponse.data)
         setIdeas(ideasResponse.data)
         setErrorMessage('')
@@ -251,6 +257,75 @@ export function AssistantPage() {
       </section>
 
       <section className="assistant-grid">
+        <article className="assistant-card assistant-copilot-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Copilot</p>
+              <h2>오늘의 코파일럿</h2>
+            </div>
+            <span className="tag-chip">{copilot ? formatDateTime(copilot.generatedAt) : '대기 중'}</span>
+          </div>
+          <div className="assistant-copilot-panel">
+            <div className="assistant-copilot-highlight">
+              <span className="control-label">Top Priority</span>
+              <strong>{copilot?.headline ?? (isLoading ? '코파일럿을 불러오는 중' : '코파일럿 정보 없음')}</strong>
+              <p>{copilot?.overview ?? '오늘 흐름을 한 문장으로 정리해주는 영역이야.'}</p>
+            </div>
+            <div className="assistant-subgrid assistant-copilot-subgrid">
+              <div>
+                <span className="control-label">우선순위</span>
+                <p className="assistant-detail-text">{copilot?.topPriority ?? '우선순위 정보 없음'}</p>
+              </div>
+              <div>
+                <span className="control-label">다음 액션</span>
+                <p className="assistant-detail-text">{copilot?.suggestedNextAction ?? '다음 액션 정보 없음'}</p>
+              </div>
+            </div>
+            <div className="assistant-subgrid assistant-copilot-subgrid">
+              <div>
+                <span className="control-label">리스크</span>
+                <ul className="assistant-list compact-list">
+                  {copilot?.risks.length ? (
+                    copilot.risks.map((risk) => <li key={risk}>{risk}</li>)
+                  ) : (
+                    <li>리스크 정보 없음</li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <span className="control-label">추천 아이디어 액션</span>
+                <ul className="assistant-list compact-list">
+                  {copilot?.recommendedIdeas.length ? (
+                    copilot.recommendedIdeas.map((idea) => (
+                      <li key={idea.id}>
+                        <strong>{idea.title}</strong>
+                        <span>{idea.recommendedAction}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li>추천 아이디어 없음</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+            <div className="assistant-secondary-section">
+              <span className="control-label">추천 시간 흐름</span>
+              <ul className="assistant-list">
+                {copilot?.todayFlow.length ? (
+                  copilot.todayFlow.map((item) => (
+                    <li key={`${item.time}-${item.focus}`}>
+                      <strong>{item.time} · {item.focus}</strong>
+                      <span>{item.reason}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li>추천 시간 흐름 없음</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </article>
+
         <article className="assistant-card">
           <div className="section-heading">
             <div>

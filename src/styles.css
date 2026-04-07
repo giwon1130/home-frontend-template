@@ -546,6 +546,39 @@ a {
   line-height: 1.7;
 }
 
+.assistant-copilot-card {
+  grid-column: 1 / -1;
+}
+
+.assistant-copilot-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.assistant-copilot-highlight {
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(29, 78, 216, 0.86));
+  color: #f8fafc;
+}
+
+.assistant-copilot-highlight strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.assistant-copilot-highlight p {
+  margin: 12px 0 0;
+  color: rgba(248, 250, 252, 0.82);
+  line-height: 1.7;
+}
+
+.assistant-copilot-subgrid {
+  margin-top: 0;
+}
+
 .idea-form {
   display: grid;
   gap: 14px;

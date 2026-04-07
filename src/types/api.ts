@@ -110,3 +110,23 @@ export type AssistantIdea = {
   createdAt: string
   updatedAt: string
 }
+
+export type AssistantCopilot = {
+  generatedAt: string
+  headline: string
+  overview: string
+  topPriority: string
+  suggestedNextAction: string
+  risks: string[]
+  recommendedIdeas: Array<{
+    id: string
+    title: string
+    status: string
+    recommendedAction: string
+  }>
+  todayFlow: Array<{
+    time: string
+    focus: string
+    reason: string
+  }>
+}

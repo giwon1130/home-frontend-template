@@ -1,5 +1,5 @@
 import { assistantApiFetch } from './client'
-import type { ApiResponse, AssistantBriefing, AssistantBriefingHistory, AssistantIdea, AssistantPlan } from '../types/api'
+import type { ApiResponse, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantIdea, AssistantPlan } from '../types/api'
 
 export function getTodayBriefingApi() {
   return assistantApiFetch<ApiResponse<AssistantBriefing>>('/api/v1/briefings/today')
@@ -11,6 +11,10 @@ export function getBriefingHistoryApi() {
 
 export function getTodayPlanApi() {
   return assistantApiFetch<ApiResponse<AssistantPlan>>('/api/v1/plans/today')
+}
+
+export function getTodayCopilotApi() {
+  return assistantApiFetch<ApiResponse<AssistantCopilot>>('/api/v1/copilot/today')
 }
 
 export function getIdeasApi() {
