@@ -621,6 +621,12 @@ a {
   line-height: 1.6;
 }
 
+.routine-item-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
 .assistant-insight-panel {
   height: 100%;
   padding: 16px;

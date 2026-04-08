@@ -188,6 +188,19 @@ export type AssistantDailyRoutine = {
   completedCount: number
   totalCount: number
   streakDays: number
+  weeklyCompletionRate: number
+  weeklyCompletedDays: number
+  recentDays: Array<{
+    date: string
+    completedCount: number
+    totalCount: number
+    completionRate: number
+  }>
+  categoryStats: Array<{
+    category: string
+    completedCount: number
+    totalCount: number
+  }>
   items: AssistantDailyRoutineItem[]
 }
 

@@ -393,6 +393,11 @@ export function AssistantPage() {
   const topSignalIdea = sortedIdeas[0] ?? null
   const topOpenAction = sortedActions.find((action) => action.status === 'OPEN') ?? null
   const topIncompleteRoutine = incompleteRoutineItems[0] ?? null
+  const routineActionTitles = new Set(
+    actions
+      .filter((action) => action.sourceQuestion.startsWith('Daily Check · '))
+      .map((action) => action.title.trim().toLowerCase()),
+  )
   const executionCandidates = [
     copilot?.topPriority
       ? {
@@ -428,6 +433,12 @@ export function AssistantPage() {
       priority: 'MEDIUM' as const,
       dueDate: buildCandidateDueDate('END_OF_WEEK'),
     }))),
+    ...incompleteRoutineItems.slice(0, 2).map((item) => ({
+      title: `${item.label} 체크`,
+      source: `Daily Check · ${item.targetTime}`,
+      priority: item.category === 'HEALTH' ? 'HIGH' as const : 'MEDIUM' as const,
+      dueDate: buildCandidateDueDate(item.targetTime === '밤' ? 'TODAY' : 'MORNING'),
+    })),
   ]
     .filter((item): item is { title: string; source: string; priority: 'LOW' | 'MEDIUM' | 'HIGH'; dueDate: string } => Boolean(item?.title?.trim()))
     .filter((item, index, collection) =>
@@ -758,6 +769,29 @@ export function AssistantPage() {
     }
   }
 
+  const handleCreateActionFromRoutine = async (itemKey: string, label: string, targetTime: string, category: string) => {
+    const key = `routine-${itemKey}`
+    setIsSavingAction(key)
+
+    try {
+      const response = await createActionApi({
+        title: `${label} 체크`,
+        sourceQuestion: `Daily Check · ${targetTime}`,
+        priority: category === 'HEALTH' ? 'HIGH' : 'MEDIUM',
+        dueDate: buildCandidateDueDate(targetTime === '밤' ? 'TODAY' : 'MORNING'),
+      })
+      if (!response.success || !response.data) {
+        throw new Error('routine-action')
+      }
+      await loadAssistantData({ silent: true })
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('루틴을 액션으로 저장하는 데 실패했습니다.')
+    } finally {
+      setIsSavingAction(null)
+    }
+  }
+
   const applyActionDuePreset = (preset: 'TODAY' | 'TOMORROW_MORNING' | 'THIS_FRIDAY') => {
     const now = new Date()
 
@@ -887,16 +921,33 @@ export function AssistantPage() {
                     <div className="assistant-tags history-card-tags">
                       <span className="tag-chip">{item.category}</span>
                       {item.completedAt ? <span className="tag-chip">{formatDateTime(item.completedAt)}</span> : null}
+                      {item.note ? <span className="tag-chip">{item.note}</span> : null}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className={`filter-chip ${item.completed ? 'active' : ''}`}
-                    onClick={() => handleRoutineToggle(item.key, !item.completed)}
-                    disabled={updatingRoutineKey === item.key}
-                  >
-                    {updatingRoutineKey === item.key ? '저장 중...' : item.completed ? '완료됨' : '체크하기'}
-                  </button>
+                  <div className="routine-item-actions">
+                    <button
+                      type="button"
+                      className={`filter-chip ${item.completed ? 'active' : ''}`}
+                      onClick={() => handleRoutineToggle(item.key, !item.completed)}
+                      disabled={updatingRoutineKey === item.key}
+                    >
+                      {updatingRoutineKey === item.key ? '저장 중...' : item.completed ? '완료됨' : '체크하기'}
+                    </button>
+                    {!item.completed ? (
+                      <button
+                        type="button"
+                        className="filter-chip"
+                        onClick={() => handleCreateActionFromRoutine(item.key, item.label, item.targetTime, item.category)}
+                        disabled={routineActionTitles.has(`${item.label} 체크`.toLowerCase()) || isSavingAction === `routine-${item.key}`}
+                      >
+                        {routineActionTitles.has(`${item.label} 체크`.toLowerCase())
+                          ? '이미 액션 있음'
+                          : isSavingAction === `routine-${item.key}`
+                            ? '저장 중...'
+                            : '액션으로 저장'}
+                      </button>
+                    ) : null}
+                  </div>
                 </article>
               ))}
             </div>
@@ -912,7 +963,36 @@ export function AssistantPage() {
               <strong>{topIncompleteRoutine?.label ?? '완료'}</strong>
               <p>{topIncompleteRoutine?.description ?? '오늘 루틴을 모두 체크했어.'}</p>
             </div>
+            <div className="action-summary-card">
+              <span className="control-label">주간 완료율</span>
+              <strong>{dailyRoutine ? `${dailyRoutine.weeklyCompletionRate}%` : '-'}</strong>
+              <p>{dailyRoutine ? `최근 7일 중 ${dailyRoutine.weeklyCompletedDays}일은 3개 이상 완료` : '집계 중'}</p>
+            </div>
           </div>
+          {dailyRoutine ? (
+            <div className="assistant-subgrid">
+              <div>
+                <span className="control-label">최근 7일 루틴 흐름</span>
+                <div className="assistant-tags">
+                  {dailyRoutine.recentDays.map((day) => (
+                    <span key={day.date} className="tag-chip">
+                      {day.date.slice(5)} · {day.completedCount}/{day.totalCount}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="control-label">카테고리별 상태</span>
+                <div className="assistant-tags">
+                  {dailyRoutine.categoryStats.map((item) => (
+                    <span key={item.category} className="tag-chip">
+                      {item.category} {item.completedCount}/{item.totalCount}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </article>
       </section>
 
