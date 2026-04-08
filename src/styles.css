@@ -760,6 +760,21 @@ a {
   justify-content: flex-end;
 }
 
+.idea-signal-high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.idea-signal-medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.idea-signal-low {
+  background: #e2e8f0;
+  color: #475569;
+}
+
 .action-card {
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }

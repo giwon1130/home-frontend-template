@@ -129,6 +129,25 @@ export function AssistantPage() {
     return statusWeight + dueWeight + priorityWeight + dueDateWeight + createdAtWeight
   }
 
+  const getIdeaSignalScore = (idea: AssistantIdea) => {
+    const statusWeight =
+      idea.status === 'IN_PROGRESS'
+        ? 5
+        : idea.status === 'OPEN'
+          ? 3
+          : 1
+    const actionWeight = Math.min(idea.suggestedActions.length, 3)
+    const tagWeight = idea.tags.some((tag) => ['assistant', 'automation', 'product', 'ai'].includes(tag.toLowerCase())) ? 2 : 0
+    return statusWeight + actionWeight + tagWeight
+  }
+
+  const getIdeaSignalLabel = (idea: AssistantIdea) => {
+    const score = getIdeaSignalScore(idea)
+    if (score >= 8) return '핵심'
+    if (score >= 5) return '유망'
+    return '보관'
+  }
+
   const toLocalDateTimeValue = (value: Date) => {
     const offset = value.getTimezoneOffset()
     const local = new Date(value.getTime() - offset * 60 * 1000)
@@ -352,7 +371,16 @@ export function AssistantPage() {
   const openIdeasCount = ideas.filter((idea) => idea.status === 'OPEN').length
   const inProgressIdeasCount = ideas.filter((idea) => idea.status === 'IN_PROGRESS').length
   const doneIdeasCount = ideas.filter((idea) => idea.status === 'DONE').length
+  const highSignalIdeasCount = ideas.filter((idea) => getIdeaSignalLabel(idea) === '핵심').length
+  const mediumSignalIdeasCount = ideas.filter((idea) => getIdeaSignalLabel(idea) === '유망').length
   const actionTitles = new Set(actions.map((action) => action.title.trim().toLowerCase()))
+  const sortedIdeas = [...searchedIdeas].sort((left, right) => {
+    const signalDelta = getIdeaSignalScore(right) - getIdeaSignalScore(left)
+    if (signalDelta !== 0) {
+      return signalDelta
+    }
+    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+  })
   const executionCandidates = [
     copilot?.topPriority
       ? {
@@ -588,6 +616,55 @@ export function AssistantPage() {
       setErrorMessage('')
     } catch {
       setErrorMessage('아이디어 추천 액션 저장에 실패했습니다.')
+    } finally {
+      setIsSavingAction(null)
+    }
+  }
+
+  const handleCaptureHeadlineAsIdea = async (headline: { source: string; title: string }) => {
+    const key = `headline-${headline.source}-${headline.title}`
+    setIsSubmitting(true)
+
+    try {
+      const response = await createIdeaApi({
+        title: `${headline.source} 이슈: ${headline.title}`,
+        rawText: `${headline.source}에서 확인한 이슈를 개인 아이디어/검토 항목으로 보관한다.\n\n헤드라인: ${headline.title}`,
+        tags: ['briefing', 'signal', headline.source.toLowerCase()],
+      })
+
+      if (!response.success || !response.data) {
+        throw new Error('capture-headline')
+      }
+
+      setIdeas((previous) => [response.data!, ...previous])
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('헤드라인을 아이디어로 저장하지 못했습니다.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleCreateActionFromHistory = async (history: AssistantCopilotHistory, actionTitle: string) => {
+    const key = `history-${history.id}-${actionTitle}`
+    setIsSavingAction(key)
+
+    try {
+      const response = await createActionApi({
+        title: actionTitle,
+        sourceQuestion: `History · ${history.question}`,
+        priority: history.intent === 'PRIORITY' || history.intent === 'RISK' ? 'HIGH' : 'MEDIUM',
+        dueDate: buildCandidateDueDate(history.intent === 'TIME' ? 'TODAY' : 'MORNING'),
+      })
+
+      if (!response.success || !response.data) {
+        throw new Error('history-action')
+      }
+
+      await loadAssistantData({ silent: true })
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('질문 이력에서 액션 저장에 실패했습니다.')
     } finally {
       setIsSavingAction(null)
     }
@@ -882,6 +959,16 @@ export function AssistantPage() {
               <span className="control-label">Lead Headline</span>
               <strong>{leadHeadline.title}</strong>
               <p>{leadHeadline.source}</p>
+              <div className="assistant-tags">
+                <button
+                  type="button"
+                  className="filter-chip"
+                  onClick={() => handleCaptureHeadlineAsIdea(leadHeadline)}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '저장 중...' : '아이디어로 저장'}
+                </button>
+              </div>
             </div>
           ) : null}
           <div className="assistant-subgrid">
@@ -1070,7 +1157,33 @@ export function AssistantPage() {
                       <span className="control-label">Suggested Actions</span>
                       <ul className="assistant-list compact-list">
                         {item.suggestedActions.map((action) => (
-                          <li key={`${item.id}-${action}`}>{action}</li>
+                          <li key={`${item.id}-${action}`}>
+                            <div className="suggested-action-block">
+                              <span>{action}</span>
+                              <p className="assistant-detail-text suggested-action-reason">
+                                {item.intent === 'PRIORITY' || item.intent === 'RISK'
+                                  ? '우선순위 판단이나 리스크 대응과 연결된 액션이라 바로 등록해두는 편이 좋다.'
+                                  : item.intent === 'TIME'
+                                    ? '시간 블록과 연결된 답변이라 오늘 일정 안으로 넣기 좋다.'
+                                    : '질문 이력에서 바로 실행으로 연결할 수 있는 액션이다.'}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="filter-chip action-save-button"
+                              onClick={() => handleCreateActionFromHistory(item, action)}
+                              disabled={
+                                actionTitles.has(action.trim().toLowerCase()) ||
+                                isSavingAction === `history-${item.id}-${action}`
+                              }
+                            >
+                              {actionTitles.has(action.trim().toLowerCase())
+                                ? '이미 액션 있음'
+                                : isSavingAction === `history-${item.id}-${action}`
+                                  ? '저장 중...'
+                                  : '액션으로 저장'}
+                            </button>
+                          </li>
                         ))}
                       </ul>
                     </div>
@@ -1542,6 +1655,16 @@ export function AssistantPage() {
               <strong>{searchedIdeas.length}</strong>
               <p>현재 필터 기준으로 보이는 아이디어</p>
             </div>
+            <div className="action-summary-card">
+              <span className="control-label">핵심 신호</span>
+              <strong>{highSignalIdeasCount}</strong>
+              <p>바로 제품/액션으로 연결할 가치가 높은 아이디어</p>
+            </div>
+            <div className="action-summary-card">
+              <span className="control-label">유망 신호</span>
+              <strong>{mediumSignalIdeasCount}</strong>
+              <p>조금 더 다듬으면 실행 후보가 될 아이디어</p>
+            </div>
           </div>
           <div className="idea-form assistant-inline-search">
             <label>
@@ -1558,14 +1681,27 @@ export function AssistantPage() {
             {searchedIdeas.length === 0 ? (
               <p className="assistant-summary">아직 저장된 아이디어가 없어.</p>
             ) : (
-              searchedIdeas.map((idea) => (
+              sortedIdeas.map((idea) => (
                 <article key={idea.id} className="idea-card">
                   <div className="project-card-header">
                     <div>
                       <h3>{idea.title}</h3>
                       <span className="project-category">{formatDateTime(idea.updatedAt)}</span>
                     </div>
-                    <span className={`project-status ${idea.status.toLowerCase()}`}>{idea.status}</span>
+                    <div className="assistant-tags history-card-tags">
+                      <span className={`project-status ${idea.status.toLowerCase()}`}>{idea.status}</span>
+                      <span
+                        className={`tag-chip idea-signal-${
+                          getIdeaSignalLabel(idea) === '핵심'
+                            ? 'high'
+                            : getIdeaSignalLabel(idea) === '유망'
+                              ? 'medium'
+                              : 'low'
+                        }`}
+                      >
+                        {getIdeaSignalLabel(idea)}
+                      </span>
+                    </div>
                   </div>
                   <p className="project-summary">{idea.summary}</p>
                   <div className="tag-list">
