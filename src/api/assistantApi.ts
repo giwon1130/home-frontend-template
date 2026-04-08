@@ -7,6 +7,7 @@ import type {
   AssistantCopilotAskResponse,
   AssistantCopilotHistory,
   AssistantAction,
+  AssistantActionSummary,
   AssistantIdea,
   AssistantPlan,
   AssistantWeeklyReview,
@@ -43,6 +44,10 @@ export function askCopilotApi(question: string) {
 export function getActionsApi(status?: 'OPEN' | 'DONE') {
   const query = status ? `?status=${status}` : ''
   return assistantApiFetch<ApiResponse<AssistantAction[]>>(`/api/v1/actions${query}`)
+}
+
+export function getActionSummaryApi() {
+  return assistantApiFetch<ApiResponse<AssistantActionSummary>>('/api/v1/actions/summary')
 }
 
 export function getWeeklyReviewApi() {

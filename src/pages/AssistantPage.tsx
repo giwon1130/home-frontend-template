@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { askCopilotApi, createActionApi, createIdeaApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, getWeeklyReviewApi, getWeeklyReviewHistoryApi, updateActionApi, updateActionStatusApi, updateIdeaApi } from '../api/assistantApi'
-import type { AssistantAction, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan, AssistantWeeklyReview, AssistantWeeklyReviewSnapshot } from '../types/api'
+import { askCopilotApi, createActionApi, createIdeaApi, getActionSummaryApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, getWeeklyReviewApi, getWeeklyReviewHistoryApi, updateActionApi, updateActionStatusApi, updateIdeaApi } from '../api/assistantApi'
+import type { AssistantAction, AssistantActionSummary, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan, AssistantWeeklyReview, AssistantWeeklyReviewSnapshot } from '../types/api'
 
 export function AssistantPage() {
   const suggestedQuestions = [
@@ -17,6 +17,7 @@ export function AssistantPage() {
   const [plan, setPlan] = useState<AssistantPlan | null>(null)
   const [ideas, setIdeas] = useState<AssistantIdea[]>([])
   const [actions, setActions] = useState<AssistantAction[]>([])
+  const [actionSummary, setActionSummary] = useState<AssistantActionSummary | null>(null)
   const [weeklyReview, setWeeklyReview] = useState<AssistantWeeklyReview | null>(null)
   const [weeklyReviewHistory, setWeeklyReviewHistory] = useState<AssistantWeeklyReviewSnapshot[]>([])
   const [title, setTitle] = useState('')
@@ -37,6 +38,7 @@ export function AssistantPage() {
   const [editingTags, setEditingTags] = useState('')
   const [ideaFilter, setIdeaFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'DONE'>('ALL')
   const [actionFilter, setActionFilter] = useState<'ALL' | 'OPEN' | 'DONE'>('ALL')
+  const [actionFocusFilter, setActionFocusFilter] = useState<'ALL' | 'OVERDUE' | 'DUE_SOON' | 'HIGH_PRIORITY'>('ALL')
   const [updatingIdeaId, setUpdatingIdeaId] = useState<string | null>(null)
   const [isSavingAction, setIsSavingAction] = useState<string | null>(null)
   const [updatingActionId, setUpdatingActionId] = useState<string | null>(null)
@@ -131,8 +133,8 @@ export function AssistantPage() {
       setIsLoading(true)
     }
 
-    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi(), getActionsApi(), getWeeklyReviewApi(), getWeeklyReviewHistoryApi()])
-      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse, actionsResponse, weeklyReviewResponse, weeklyReviewHistoryResponse]) => {
+    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi(), getActionsApi(), getActionSummaryApi(), getWeeklyReviewApi(), getWeeklyReviewHistoryApi()])
+      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse, actionsResponse, actionSummaryResponse, weeklyReviewResponse, weeklyReviewHistoryResponse]) => {
         if (!briefingResponse.success || !briefingResponse.data) {
           throw new Error('briefing')
         }
@@ -161,6 +163,10 @@ export function AssistantPage() {
           throw new Error('actions')
         }
 
+        if (!actionSummaryResponse.success || !actionSummaryResponse.data) {
+          throw new Error('action-summary')
+        }
+
         if (!weeklyReviewResponse.success || !weeklyReviewResponse.data) {
           throw new Error('weekly-review')
         }
@@ -176,6 +182,7 @@ export function AssistantPage() {
         setPlan(planResponse.data)
         setIdeas(ideasResponse.data)
         setActions(actionsResponse.data)
+        setActionSummary(actionSummaryResponse.data)
         setWeeklyReview(weeklyReviewResponse.data)
         setWeeklyReviewHistory(weeklyReviewHistoryResponse.data)
         setErrorMessage('')
@@ -276,7 +283,16 @@ export function AssistantPage() {
     ideaFilter === 'ALL' ? ideas : ideas.filter((idea) => idea.status === ideaFilter)
   const filteredActions =
     actionFilter === 'ALL' ? actions : actions.filter((action) => action.status === actionFilter)
-  const sortedActions = [...filteredActions].sort((left, right) => getActionSortWeight(right) - getActionSortWeight(left))
+  const focusedActions =
+    actionFocusFilter === 'ALL'
+      ? filteredActions
+      : filteredActions.filter((action) => {
+        if (actionFocusFilter === 'OVERDUE') return getDueState(action) === 'OVERDUE'
+        if (actionFocusFilter === 'DUE_SOON') return getDueState(action) === 'DUE_SOON'
+        if (actionFocusFilter === 'HIGH_PRIORITY') return action.status === 'OPEN' && action.priority === 'HIGH'
+        return true
+      })
+  const sortedActions = [...focusedActions].sort((left, right) => getActionSortWeight(right) - getActionSortWeight(left))
   const uniqueHeadlineSources = new Set((briefing?.headlines ?? []).map((headline) => headline.source)).size
   const leadHeadline = briefing?.headlines[0] ?? latestHistory?.headlines[0] ?? null
   const overdueActionsCount = actions.filter((action) => getDueState(action) === 'OVERDUE').length
@@ -432,6 +448,29 @@ export function AssistantPage() {
     } finally {
       setUpdatingActionId(null)
     }
+  }
+
+  const applyActionDuePreset = (preset: 'TODAY' | 'TOMORROW_MORNING' | 'THIS_FRIDAY') => {
+    const now = new Date()
+
+    if (preset === 'TODAY') {
+      now.setHours(18, 0, 0, 0)
+      setEditingActionDueDate(now.toISOString().slice(0, 16))
+      return
+    }
+
+    if (preset === 'TOMORROW_MORNING') {
+      now.setDate(now.getDate() + 1)
+      now.setHours(9, 0, 0, 0)
+      setEditingActionDueDate(now.toISOString().slice(0, 16))
+      return
+    }
+
+    const day = now.getDay()
+    const diff = day === 5 ? 0 : (5 - day + 7) % 7
+    now.setDate(now.getDate() + diff)
+    now.setHours(18, 0, 0, 0)
+    setEditingActionDueDate(now.toISOString().slice(0, 16))
   }
 
   return (
@@ -906,7 +945,37 @@ export function AssistantPage() {
               <button type="button" className={`filter-chip${actionFilter === 'DONE' ? ' active' : ''}`} onClick={() => setActionFilter('DONE')}>DONE</button>
             </div>
           </div>
-          {filteredActions.length === 0 ? (
+          {actionSummary ? (
+            <div className="assistant-subgrid action-summary-grid">
+              <div className="action-summary-card">
+                <span className="control-label">완료율</span>
+                <strong>{actionSummary.completionRate}%</strong>
+                <p>전체 액션 {actionSummary.totalCount}건 기준</p>
+              </div>
+              <div className="action-summary-card">
+                <span className="control-label">긴급 처리</span>
+                <strong>{actionSummary.overdueCount}</strong>
+                <p>지금 바로 봐야 하는 지연 액션</p>
+              </div>
+              <div className="action-summary-card">
+                <span className="control-label">24시간 내</span>
+                <strong>{actionSummary.dueSoonCount}</strong>
+                <p>오늘 안에 정리할 가능성이 높은 액션</p>
+              </div>
+              <div className="action-summary-card">
+                <span className="control-label">HIGH OPEN</span>
+                <strong>{actionSummary.highPriorityOpenCount}</strong>
+                <p>고우선으로 남아 있는 작업</p>
+              </div>
+            </div>
+          ) : null}
+          <div className="idea-filter-group">
+            <button type="button" className={`filter-chip${actionFocusFilter === 'ALL' ? ' active' : ''}`} onClick={() => setActionFocusFilter('ALL')}>전체 보기</button>
+            <button type="button" className={`filter-chip${actionFocusFilter === 'OVERDUE' ? ' active' : ''}`} onClick={() => setActionFocusFilter('OVERDUE')}>지연만</button>
+            <button type="button" className={`filter-chip${actionFocusFilter === 'DUE_SOON' ? ' active' : ''}`} onClick={() => setActionFocusFilter('DUE_SOON')}>24시간 내</button>
+            <button type="button" className={`filter-chip${actionFocusFilter === 'HIGH_PRIORITY' ? ' active' : ''}`} onClick={() => setActionFocusFilter('HIGH_PRIORITY')}>HIGH 우선</button>
+          </div>
+          {sortedActions.length === 0 ? (
             <p className="assistant-summary">아직 저장된 액션이 없어. 답변의 Suggested Actions에서 바로 저장해봐.</p>
           ) : (
             <div className="briefing-history-list">
@@ -965,6 +1034,11 @@ export function AssistantPage() {
                           onChange={(event) => setEditingActionDueDate(event.target.value)}
                         />
                       </label>
+                      <div className="idea-card-actions">
+                        <button type="button" className="filter-chip" onClick={() => applyActionDuePreset('TODAY')}>오늘 18시</button>
+                        <button type="button" className="filter-chip" onClick={() => applyActionDuePreset('TOMORROW_MORNING')}>내일 09시</button>
+                        <button type="button" className="filter-chip" onClick={() => applyActionDuePreset('THIS_FRIDAY')}>이번 주 금요일</button>
+                      </div>
                     </div>
                   ) : null}
                   <div className="assistant-tags">

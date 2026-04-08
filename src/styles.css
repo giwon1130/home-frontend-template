@@ -496,6 +496,30 @@ a {
   line-height: 1.6;
 }
 
+.action-summary-grid {
+  margin: 0 0 16px;
+}
+
+.action-summary-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.92));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.action-summary-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.action-summary-card p {
+  margin: 10px 0 0;
+  color: #475569;
+  line-height: 1.5;
+}
+
 .assistant-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

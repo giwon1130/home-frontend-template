@@ -164,6 +164,16 @@ export type AssistantAction = {
   completedAt: string | null
 }
 
+export type AssistantActionSummary = {
+  totalCount: number
+  openCount: number
+  doneCount: number
+  overdueCount: number
+  dueSoonCount: number
+  highPriorityOpenCount: number
+  completionRate: number
+}
+
 export type AssistantWeeklyReview = {
   periodStart: string
   periodEnd: string
