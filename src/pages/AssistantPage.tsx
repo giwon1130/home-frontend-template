@@ -61,6 +61,69 @@ export function AssistantPage() {
       minute: '2-digit',
     })
 
+  const getPriorityWeight = (priority: AssistantAction['priority']) => {
+    switch (priority) {
+      case 'HIGH':
+        return 3
+      case 'MEDIUM':
+        return 2
+      case 'LOW':
+        return 1
+      default:
+        return 0
+    }
+  }
+
+  const getDueState = (action: AssistantAction) => {
+    if (action.status === 'DONE' || !action.dueDate) {
+      return 'NONE' as const
+    }
+
+    const dueTime = new Date(action.dueDate).getTime()
+    const now = Date.now()
+    const diffHours = (dueTime - now) / (1000 * 60 * 60)
+
+    if (diffHours < 0) {
+      return 'OVERDUE' as const
+    }
+
+    if (diffHours <= 24) {
+      return 'DUE_SOON' as const
+    }
+
+    return 'SCHEDULED' as const
+  }
+
+  const getDueStateLabel = (state: ReturnType<typeof getDueState>) => {
+    switch (state) {
+      case 'OVERDUE':
+        return '지연'
+      case 'DUE_SOON':
+        return '임박'
+      case 'SCHEDULED':
+        return '예정'
+      default:
+        return '여유'
+    }
+  }
+
+  const getActionSortWeight = (action: AssistantAction) => {
+    const dueState = getDueState(action)
+    const statusWeight = action.status === 'OPEN' ? 10_000_000_000 : 0
+    const dueWeight =
+      dueState === 'OVERDUE'
+        ? 3_000_000_000
+        : dueState === 'DUE_SOON'
+          ? 2_000_000_000
+          : dueState === 'SCHEDULED'
+            ? 1_000_000_000
+            : 0
+    const priorityWeight = getPriorityWeight(action.priority) * 100_000_000
+    const dueDateWeight = action.dueDate ? 10_000_000 - new Date(action.dueDate).getTime() / 1_000_000 : 0
+    const createdAtWeight = 1_000_000 - new Date(action.createdAt).getTime() / 1_000_000
+    return statusWeight + dueWeight + priorityWeight + dueDateWeight + createdAtWeight
+  }
+
   const loadAssistantData = async (options?: { silent?: boolean }) => {
     if (options?.silent) {
       setIsRefreshing(true)
@@ -213,8 +276,10 @@ export function AssistantPage() {
     ideaFilter === 'ALL' ? ideas : ideas.filter((idea) => idea.status === ideaFilter)
   const filteredActions =
     actionFilter === 'ALL' ? actions : actions.filter((action) => action.status === actionFilter)
+  const sortedActions = [...filteredActions].sort((left, right) => getActionSortWeight(right) - getActionSortWeight(left))
   const uniqueHeadlineSources = new Set((briefing?.headlines ?? []).map((headline) => headline.source)).size
   const leadHeadline = briefing?.headlines[0] ?? latestHistory?.headlines[0] ?? null
+  const overdueActionsCount = actions.filter((action) => getDueState(action) === 'OVERDUE').length
 
   const startActionEdit = (action: AssistantAction) => {
     setEditingActionId(action.id)
@@ -835,6 +900,7 @@ export function AssistantPage() {
             </div>
             <div className="assistant-tags">
               <span className="tag-chip">OPEN {openActionsCount}</span>
+              <span className={`tag-chip${overdueActionsCount > 0 ? ' tag-chip-alert' : ''}`}>지연 {overdueActionsCount}</span>
               <button type="button" className={`filter-chip${actionFilter === 'ALL' ? ' active' : ''}`} onClick={() => setActionFilter('ALL')}>ALL</button>
               <button type="button" className={`filter-chip${actionFilter === 'OPEN' ? ' active' : ''}`} onClick={() => setActionFilter('OPEN')}>OPEN</button>
               <button type="button" className={`filter-chip${actionFilter === 'DONE' ? ' active' : ''}`} onClick={() => setActionFilter('DONE')}>DONE</button>
@@ -844,22 +910,40 @@ export function AssistantPage() {
             <p className="assistant-summary">아직 저장된 액션이 없어. 답변의 Suggested Actions에서 바로 저장해봐.</p>
           ) : (
             <div className="briefing-history-list">
-              {filteredActions.map((action) => (
-                <article key={action.id} className="briefing-history-item">
+              {sortedActions.map((action) => {
+                const dueState = getDueState(action)
+                const dueStateLabel = getDueStateLabel(dueState)
+
+                return (
+                <article key={action.id} className={`briefing-history-item action-card ${dueState !== 'NONE' ? `action-card-${dueState.toLowerCase()}` : ''}`}>
                   <div className="project-card-header">
                     <div>
                       <h3>{action.title}</h3>
                       <span className="project-category">{formatDateTime(action.createdAt)}</span>
                     </div>
                     <div className="assistant-tags">
-                      <span className="tag-chip">{action.status}</span>
-                      <span className="tag-chip">{action.priority}</span>
+                      <span className={`tag-chip ${action.status === 'DONE' ? 'tag-chip-muted' : ''}`}>{action.status}</span>
+                      <span className={`tag-chip action-priority-chip action-priority-${action.priority.toLowerCase()}`}>{action.priority}</span>
+                      {dueState !== 'NONE' ? <span className={`tag-chip action-due-chip action-due-${dueState.toLowerCase()}`}>{dueStateLabel}</span> : null}
                     </div>
                   </div>
                   <p className="project-summary">질문: {action.sourceQuestion}</p>
-                  <p className="assistant-detail-text">
-                    마감일: {action.dueDate ? formatDateTime(action.dueDate) : '미설정'}
-                  </p>
+                  <div className="action-meta-row">
+                    <p className="assistant-detail-text">
+                      마감일: {action.dueDate ? formatDateTime(action.dueDate) : '미설정'}
+                    </p>
+                    {action.status === 'OPEN' ? (
+                      <p className="assistant-detail-text action-sort-hint">
+                        {dueState === 'OVERDUE'
+                          ? '우선 처리 필요'
+                          : dueState === 'DUE_SOON'
+                            ? '24시간 내 처리 권장'
+                            : action.priority === 'HIGH'
+                              ? '우선순위 높음'
+                              : '일정 여유 있음'}
+                      </p>
+                    ) : null}
+                  </div>
                   {editingActionId === action.id ? (
                     <div className="idea-edit-form">
                       <label>
@@ -915,7 +999,7 @@ export function AssistantPage() {
                     </button>
                   </div>
                 </article>
-              ))}
+              )})}
             </div>
           )}
         </article>
