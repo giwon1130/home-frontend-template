@@ -959,6 +959,19 @@ export function AssistantPage() {
               </div>
             </div>
           ) : null}
+          {dailyRoutine?.reminders.length ? (
+            <div className="assistant-secondary-section">
+              <span className="control-label">Routine Reminders</span>
+              <ul className="assistant-list compact-list">
+                {dailyRoutine.reminders.map((reminder) => (
+                  <li key={`${reminder.itemKey}-${reminder.reminderTime}`}>
+                    <strong>{reminder.reminderTime} · {reminder.label}</strong>
+                    <span>{reminder.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {dailyRoutine ? (
             <div className="routine-list">
               {dailyRoutine.items.map((item) => (

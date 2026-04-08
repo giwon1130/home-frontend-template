@@ -194,6 +194,12 @@ export type AssistantDailyRoutine = {
   weeklyCompletedDays: number
   insight: string
   suggestedActions: string[]
+  reminders: Array<{
+    itemKey: string
+    label: string
+    reminderTime: string
+    reason: string
+  }>
   recentDays: Array<{
     date: string
     completedCount: number
