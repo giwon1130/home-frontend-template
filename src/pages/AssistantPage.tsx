@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { askCopilotApi, createActionApi, createIdeaApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, updateActionStatusApi, updateIdeaApi } from '../api/assistantApi'
-import type { AssistantAction, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan } from '../types/api'
+import { askCopilotApi, createActionApi, createIdeaApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, getWeeklyReviewApi, updateActionStatusApi, updateIdeaApi } from '../api/assistantApi'
+import type { AssistantAction, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan, AssistantWeeklyReview } from '../types/api'
 
 export function AssistantPage() {
   const suggestedQuestions = [
@@ -17,6 +17,7 @@ export function AssistantPage() {
   const [plan, setPlan] = useState<AssistantPlan | null>(null)
   const [ideas, setIdeas] = useState<AssistantIdea[]>([])
   const [actions, setActions] = useState<AssistantAction[]>([])
+  const [weeklyReview, setWeeklyReview] = useState<AssistantWeeklyReview | null>(null)
   const [title, setTitle] = useState('')
   const [rawText, setRawText] = useState('')
   const [tags, setTags] = useState('')
@@ -34,9 +35,19 @@ export function AssistantPage() {
   const [editingRawText, setEditingRawText] = useState('')
   const [editingTags, setEditingTags] = useState('')
   const [ideaFilter, setIdeaFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'DONE'>('ALL')
+  const [actionFilter, setActionFilter] = useState<'ALL' | 'OPEN' | 'DONE'>('ALL')
   const [updatingIdeaId, setUpdatingIdeaId] = useState<string | null>(null)
   const [isSavingAction, setIsSavingAction] = useState<string | null>(null)
   const [updatingActionId, setUpdatingActionId] = useState<string | null>(null)
+  const [showFallbackReason, setShowFallbackReason] = useState(false)
+
+  const intentLabels: Record<AssistantCopilotAskResponse['intent'], string> = {
+    PRIORITY: '우선순위',
+    TIME: '시간 계획',
+    IDEA: '아이디어',
+    RISK: '리스크',
+    SUMMARY: '요약',
+  }
 
   const formatDateTime = (value: string) =>
     new Date(value).toLocaleString('ko-KR', {
@@ -53,8 +64,8 @@ export function AssistantPage() {
       setIsLoading(true)
     }
 
-    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi(), getActionsApi()])
-      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse, actionsResponse]) => {
+    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi(), getActionsApi(), getWeeklyReviewApi()])
+      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse, actionsResponse, weeklyReviewResponse]) => {
         if (!briefingResponse.success || !briefingResponse.data) {
           throw new Error('briefing')
         }
@@ -83,6 +94,10 @@ export function AssistantPage() {
           throw new Error('actions')
         }
 
+        if (!weeklyReviewResponse.success || !weeklyReviewResponse.data) {
+          throw new Error('weekly-review')
+        }
+
         setBriefing(briefingResponse.data)
         setBriefingHistory(historyResponse.data)
         setCopilot(copilotResponse.data)
@@ -90,6 +105,7 @@ export function AssistantPage() {
         setPlan(planResponse.data)
         setIdeas(ideasResponse.data)
         setActions(actionsResponse.data)
+        setWeeklyReview(weeklyReviewResponse.data)
         setErrorMessage('')
       })
       .catch(() => {
@@ -159,6 +175,7 @@ export function AssistantPage() {
       }
 
       setCopilotAnswer(response.data)
+      setShowFallbackReason(false)
       setCopilotHistory((previous) => [
         {
           id: `${response.data.generatedAt}-${response.data.question}`,
@@ -185,6 +202,8 @@ export function AssistantPage() {
   const openActionsCount = actions.filter((action) => action.status === 'OPEN').length
   const filteredIdeas =
     ideaFilter === 'ALL' ? ideas : ideas.filter((idea) => idea.status === ideaFilter)
+  const filteredActions =
+    actionFilter === 'ALL' ? actions : actions.filter((action) => action.status === actionFilter)
   const uniqueHeadlineSources = new Set((briefing?.headlines ?? []).map((headline) => headline.source)).size
   const leadHeadline = briefing?.headlines[0] ?? latestHistory?.headlines[0] ?? null
 
@@ -369,6 +388,66 @@ export function AssistantPage() {
           <span className="control-label">Action Tracker</span>
           <strong>{openActionsCount}</strong>
           <p>아직 완료하지 않은 실행 액션 수</p>
+        </article>
+      </section>
+
+      <section className="assistant-grid">
+        <article className="assistant-card assistant-history-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Weekly Review</p>
+              <h2>주간 회고</h2>
+            </div>
+            <span className="tag-chip">{weeklyReview ? `${weeklyReview.metrics.actionsCompleted} done` : '대기 중'}</span>
+          </div>
+          {weeklyReview ? (
+            <div className="assistant-copilot-panel">
+              <div className="assistant-insight-panel">
+                <span className="control-label">Summary</span>
+                <p className="assistant-detail-text">{weeklyReview.summary}</p>
+              </div>
+              <div className="assistant-subgrid assistant-copilot-subgrid">
+                <div>
+                  <span className="control-label">Metrics</span>
+                  <ul className="assistant-list compact-list">
+                    <li>질문 {weeklyReview.metrics.questionsAsked}건</li>
+                    <li>액션 생성 {weeklyReview.metrics.actionsCreated}건</li>
+                    <li>액션 완료 {weeklyReview.metrics.actionsCompleted}건</li>
+                    <li>열린 액션 {weeklyReview.metrics.openActions}건</li>
+                    <li>아이디어 {weeklyReview.metrics.ideasCaptured}건</li>
+                  </ul>
+                </div>
+                <div>
+                  <span className="control-label">Next Focus</span>
+                  <ul className="assistant-list compact-list">
+                    {weeklyReview.nextFocus.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <div className="assistant-subgrid assistant-copilot-subgrid">
+                <div>
+                  <span className="control-label">Wins</span>
+                  <ul className="assistant-list compact-list">
+                    {weeklyReview.wins.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <span className="control-label">Risks</span>
+                  <ul className="assistant-list compact-list">
+                    {weeklyReview.risks.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="assistant-summary">주간 회고 데이터를 불러오는 중이야.</p>
+          )}
         </article>
       </section>
 
@@ -623,7 +702,12 @@ export function AssistantPage() {
               <p className="eyebrow">Copilot Answer</p>
               <h2>답변</h2>
             </div>
-            {copilotAnswer ? <span className="tag-chip">{copilotAnswer.source}</span> : null}
+            {copilotAnswer ? (
+              <div className="assistant-tags">
+                <span className="tag-chip">{copilotAnswer.source}</span>
+                <span className="tag-chip">{intentLabels[copilotAnswer.intent]}</span>
+              </div>
+            ) : null}
           </div>
           {copilotAnswer ? (
             <div className="assistant-copilot-panel">
@@ -634,8 +718,19 @@ export function AssistantPage() {
                 <p className="assistant-detail-text">{copilotAnswer.answer}</p>
                 {copilotAnswer.fallbackReason ? (
                   <>
-                    <span className="control-label">Fallback Reason</span>
-                    <p className="assistant-detail-text">{copilotAnswer.fallbackReason}</p>
+                    <button
+                      type="button"
+                      className="history-toggle-button"
+                      onClick={() => setShowFallbackReason((current) => !current)}
+                    >
+                      {showFallbackReason ? 'Fallback 숨기기' : 'Fallback 보기'}
+                    </button>
+                    {showFallbackReason ? (
+                      <>
+                        <span className="control-label">Fallback Reason</span>
+                        <p className="assistant-detail-text">{copilotAnswer.fallbackReason}</p>
+                      </>
+                    ) : null}
                   </>
                 ) : null}
               </div>
@@ -681,13 +776,18 @@ export function AssistantPage() {
               <p className="eyebrow">Action Tracker</p>
               <h2>실행 액션 추적</h2>
             </div>
-            <span className="tag-chip">OPEN {openActionsCount}</span>
+            <div className="assistant-tags">
+              <span className="tag-chip">OPEN {openActionsCount}</span>
+              <button type="button" className={`filter-chip${actionFilter === 'ALL' ? ' active' : ''}`} onClick={() => setActionFilter('ALL')}>ALL</button>
+              <button type="button" className={`filter-chip${actionFilter === 'OPEN' ? ' active' : ''}`} onClick={() => setActionFilter('OPEN')}>OPEN</button>
+              <button type="button" className={`filter-chip${actionFilter === 'DONE' ? ' active' : ''}`} onClick={() => setActionFilter('DONE')}>DONE</button>
+            </div>
           </div>
-          {actions.length === 0 ? (
+          {filteredActions.length === 0 ? (
             <p className="assistant-summary">아직 저장된 액션이 없어. 답변의 Suggested Actions에서 바로 저장해봐.</p>
           ) : (
             <div className="briefing-history-list">
-              {actions.map((action) => (
+              {filteredActions.map((action) => (
                 <article key={action.id} className="briefing-history-item">
                   <div className="project-card-header">
                     <div>

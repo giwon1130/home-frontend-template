@@ -9,6 +9,7 @@ import type {
   AssistantAction,
   AssistantIdea,
   AssistantPlan,
+  AssistantWeeklyReview,
 } from '../types/api'
 
 export function getTodayBriefingApi() {
@@ -41,6 +42,10 @@ export function askCopilotApi(question: string) {
 export function getActionsApi(status?: 'OPEN' | 'DONE') {
   const query = status ? `?status=${status}` : ''
   return assistantApiFetch<ApiResponse<AssistantAction[]>>(`/api/v1/actions${query}`)
+}
+
+export function getWeeklyReviewApi() {
+  return assistantApiFetch<ApiResponse<AssistantWeeklyReview>>('/api/v1/reviews/weekly')
 }
 
 export function createActionApi(payload: { title: string; sourceQuestion: string }) {

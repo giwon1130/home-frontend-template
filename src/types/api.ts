@@ -134,6 +134,7 @@ export type AssistantCopilot = {
 export type AssistantCopilotAskResponse = {
   question: string
   answer: string
+  intent: 'PRIORITY' | 'TIME' | 'IDEA' | 'RISK' | 'SUMMARY'
   reasoning: string[]
   suggestedActions: string[]
   source: string
@@ -159,4 +160,20 @@ export type AssistantAction = {
   createdAt: string
   updatedAt: string
   completedAt: string | null
+}
+
+export type AssistantWeeklyReview = {
+  periodStart: string
+  periodEnd: string
+  summary: string
+  metrics: {
+    questionsAsked: number
+    actionsCreated: number
+    actionsCompleted: number
+    openActions: number
+    ideasCaptured: number
+  }
+  wins: string[]
+  risks: string[]
+  nextFocus: string[]
 }
