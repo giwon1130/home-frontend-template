@@ -164,6 +164,105 @@ export function AssistantPage() {
     }
   }
 
+  const getModeActionBoost = (action: AssistantAction) => {
+    const mode = copilot?.operatingMode.code
+
+    if (!mode || action.status === 'DONE') {
+      return 0
+    }
+
+    const source = action.sourceQuestion.toLowerCase()
+
+    if (mode === 'RESET') {
+      if (source.includes('daily check') || source.includes('condition check-in')) return 700_000_000
+      if (action.priority === 'HIGH') return 200_000_000
+      return 0
+    }
+
+    if (mode === 'RECOVERY') {
+      if (source.includes('condition check-in') || source.includes('daily check')) return 500_000_000
+      if (source.includes('weekly review') || source.includes('history')) return 250_000_000
+      return 0
+    }
+
+    if (mode === 'DEEP_FOCUS') {
+      if (source.includes('copilot') || source.includes('today plan') || source.includes('morning briefing')) return 550_000_000
+      if (action.priority === 'HIGH') return 250_000_000
+      return 0
+    }
+
+    if (source.includes('copilot') || action.priority === 'HIGH') {
+      return 180_000_000
+    }
+
+    return 0
+  }
+
+  const getModeActionHint = (action: AssistantAction) => {
+    const mode = copilot?.operatingMode.code
+    const source = action.sourceQuestion.toLowerCase()
+
+    if (mode === 'RESET' && (source.includes('daily check') || source.includes('condition check-in'))) {
+      return '오늘 모드 기준 최우선'
+    }
+
+    if (mode === 'RECOVERY' && (source.includes('condition check-in') || source.includes('daily check'))) {
+      return '회복 모드와 직접 연결'
+    }
+
+    if (mode === 'DEEP_FOCUS' && (source.includes('copilot') || source.includes('today plan') || source.includes('morning briefing'))) {
+      return '딥포커스 모드 핵심 작업'
+    }
+
+    return null
+  }
+
+  const getModeCandidateBoost = (candidate: { source: string; priority: 'LOW' | 'MEDIUM' | 'HIGH' }) => {
+    const mode = copilot?.operatingMode.code
+    const source = candidate.source.toLowerCase()
+
+    if (!mode) {
+      return 0
+    }
+
+    if (mode === 'RESET') {
+      if (source.includes('condition check-in') || source.includes('daily check')) return 10
+      return candidate.priority === 'HIGH' ? 2 : 0
+    }
+
+    if (mode === 'RECOVERY') {
+      if (source.includes('condition check-in') || source.includes('daily check')) return 8
+      if (source.includes('weekly review')) return 4
+      return 0
+    }
+
+    if (mode === 'DEEP_FOCUS') {
+      if (source.includes('copilot') || source.includes('today plan') || source.includes('morning briefing')) return 9
+      return candidate.priority === 'HIGH' ? 3 : 0
+    }
+
+    return candidate.priority === 'HIGH' ? 2 : 0
+  }
+
+  const getModeCandidateHint = (candidate: { source: string }) => {
+    const mode = copilot?.operatingMode.code
+    const source = candidate.source.toLowerCase()
+
+    if (mode === 'RESET' && (source.includes('condition check-in') || source.includes('daily check'))) {
+      return '리셋 모드 우선 후보'
+    }
+
+    if (mode === 'RECOVERY' && (source.includes('condition check-in') || source.includes('daily check'))) {
+      return '회복 모드 우선 후보'
+    }
+
+    if (mode === 'DEEP_FOCUS' && (source.includes('copilot') || source.includes('today plan') || source.includes('morning briefing'))) {
+      return '집중 모드 우선 후보'
+    }
+
+    return null
+  }
+
   const getActionSortWeight = (action: AssistantAction) => {
     const dueState = getDueState(action)
     const statusWeight = action.status === 'OPEN' ? 10_000_000_000 : 0
@@ -178,7 +277,8 @@ export function AssistantPage() {
     const priorityWeight = getPriorityWeight(action.priority) * 100_000_000
     const dueDateWeight = action.dueDate ? 10_000_000 - new Date(action.dueDate).getTime() / 1_000_000 : 0
     const createdAtWeight = 1_000_000 - new Date(action.createdAt).getTime() / 1_000_000
-    return statusWeight + dueWeight + priorityWeight + dueDateWeight + createdAtWeight
+    const modeBoost = getModeActionBoost(action)
+    return statusWeight + dueWeight + priorityWeight + dueDateWeight + createdAtWeight + modeBoost
   }
 
   const getIdeaSignalScore = (idea: AssistantIdea) => {
@@ -506,6 +606,7 @@ export function AssistantPage() {
     .filter((item): item is { title: string; source: string; priority: 'LOW' | 'MEDIUM' | 'HIGH'; dueDate: string } => Boolean(item?.title?.trim()))
     .filter((item, index, collection) =>
       collection.findIndex((candidate) => candidate.title.trim().toLowerCase() === item.title.trim().toLowerCase()) === index)
+    .sort((left, right) => getModeCandidateBoost(right) - getModeCandidateBoost(left))
     .slice(0, 6)
 
   const startActionEdit = (action: AssistantAction) => {
@@ -1726,6 +1827,7 @@ export function AssistantPage() {
                       <div className="assistant-tags history-card-tags">
                         <span className={`tag-chip action-priority-${candidate.priority.toLowerCase()}`}>{candidate.priority}</span>
                         <span className="tag-chip">{formatDateTime(candidate.dueDate)}</span>
+                        {getModeCandidateHint(candidate) ? <span className="tag-chip">{getModeCandidateHint(candidate)}</span> : null}
                       </div>
                     </div>
                     <div className="assistant-tags">
@@ -2046,7 +2148,9 @@ export function AssistantPage() {
                           ? '우선 처리 필요'
                           : dueState === 'DUE_SOON'
                             ? '24시간 내 처리 권장'
-                            : action.priority === 'HIGH'
+                            : getModeActionHint(action)
+                              ? getModeActionHint(action)
+                              : action.priority === 'HIGH'
                               ? '우선순위 높음'
                               : '일정 여유 있음'}
                       </p>
