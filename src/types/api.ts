@@ -150,3 +150,13 @@ export type AssistantCopilotHistory = {
   source: string
   generatedAt: string
 }
+
+export type AssistantAction = {
+  id: string
+  title: string
+  sourceQuestion: string
+  status: 'OPEN' | 'DONE'
+  createdAt: string
+  updatedAt: string
+  completedAt: string | null
+}

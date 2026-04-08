@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { askCopilotApi, createIdeaApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, updateIdeaApi } from '../api/assistantApi'
-import type { AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan } from '../types/api'
+import { askCopilotApi, createActionApi, createIdeaApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, updateActionStatusApi, updateIdeaApi } from '../api/assistantApi'
+import type { AssistantAction, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan } from '../types/api'
 
 export function AssistantPage() {
   const suggestedQuestions = [
@@ -16,6 +16,7 @@ export function AssistantPage() {
   const [copilotHistory, setCopilotHistory] = useState<AssistantCopilotHistory[]>([])
   const [plan, setPlan] = useState<AssistantPlan | null>(null)
   const [ideas, setIdeas] = useState<AssistantIdea[]>([])
+  const [actions, setActions] = useState<AssistantAction[]>([])
   const [title, setTitle] = useState('')
   const [rawText, setRawText] = useState('')
   const [tags, setTags] = useState('')
@@ -34,6 +35,8 @@ export function AssistantPage() {
   const [editingTags, setEditingTags] = useState('')
   const [ideaFilter, setIdeaFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'DONE'>('ALL')
   const [updatingIdeaId, setUpdatingIdeaId] = useState<string | null>(null)
+  const [isSavingAction, setIsSavingAction] = useState<string | null>(null)
+  const [updatingActionId, setUpdatingActionId] = useState<string | null>(null)
 
   const formatDateTime = (value: string) =>
     new Date(value).toLocaleString('ko-KR', {
@@ -50,8 +53,8 @@ export function AssistantPage() {
       setIsLoading(true)
     }
 
-    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi()])
-      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse]) => {
+    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi(), getActionsApi()])
+      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse, actionsResponse]) => {
         if (!briefingResponse.success || !briefingResponse.data) {
           throw new Error('briefing')
         }
@@ -76,12 +79,17 @@ export function AssistantPage() {
           throw new Error('ideas')
         }
 
+        if (!actionsResponse.success || !actionsResponse.data) {
+          throw new Error('actions')
+        }
+
         setBriefing(briefingResponse.data)
         setBriefingHistory(historyResponse.data)
         setCopilot(copilotResponse.data)
         setCopilotHistory(copilotHistoryResponse.data)
         setPlan(planResponse.data)
         setIdeas(ideasResponse.data)
+        setActions(actionsResponse.data)
         setErrorMessage('')
       })
       .catch(() => {
@@ -174,6 +182,7 @@ export function AssistantPage() {
 
   const latestHistory = briefingHistory[0]
   const recentIdeasCount = ideas.filter((idea) => idea.status === 'OPEN' || idea.status === 'IN_PROGRESS').length
+  const openActionsCount = actions.filter((action) => action.status === 'OPEN').length
   const filteredIdeas =
     ideaFilter === 'ALL' ? ideas : ideas.filter((idea) => idea.status === ideaFilter)
   const uniqueHeadlineSources = new Set((briefing?.headlines ?? []).map((headline) => headline.source)).size
@@ -252,6 +261,49 @@ export function AssistantPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const handleCreateActionFromSuggestion = async (actionTitle: string) => {
+    if (!copilotAnswer) {
+      return
+    }
+
+    const key = `${copilotAnswer.generatedAt}-${actionTitle}`
+    setIsSavingAction(key)
+
+    try {
+      const response = await createActionApi({
+        title: actionTitle,
+        sourceQuestion: copilotAnswer.question,
+      })
+      if (!response.success || !response.data) {
+        throw new Error('create-action')
+      }
+      setActions((previous) => [response.data!, ...previous])
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('액션 저장에 실패했습니다.')
+    } finally {
+      setIsSavingAction(null)
+    }
+  }
+
+  const handleActionStatusChange = async (actionId: string, status: 'OPEN' | 'DONE') => {
+    setUpdatingActionId(actionId)
+    try {
+      const response = await updateActionStatusApi(actionId, status)
+      if (!response.success || !response.data) {
+        throw new Error('update-action')
+      }
+      setActions((previous) =>
+        previous.map((action) => (action.id === actionId ? response.data! : action))
+      )
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('액션 상태 변경에 실패했습니다.')
+    } finally {
+      setUpdatingActionId(null)
+    }
+  }
+
   return (
     <main className="page-shell">
       <header className="assistant-hero">
@@ -312,6 +364,11 @@ export function AssistantPage() {
           <span className="control-label">Ideas</span>
           <strong>{ideas.length}</strong>
           <p>보관 중인 아이디어 아카이브 수</p>
+        </article>
+        <article className="assistant-stat-card">
+          <span className="control-label">Action Tracker</span>
+          <strong>{openActionsCount}</strong>
+          <p>아직 완료하지 않은 실행 액션 수</p>
         </article>
       </section>
 
@@ -594,8 +651,18 @@ export function AssistantPage() {
                 <div>
                   <span className="control-label">Suggested Actions</span>
                   <ul className="assistant-list compact-list">
-                    {copilotAnswer.suggestedActions.map((item) => (
-                      <li key={item}>{item}</li>
+                    {copilotAnswer.suggestedActions.map((item, index) => (
+                      <li key={`${item}-${index}`}>
+                        <span>{item}</span>
+                        <button
+                          type="button"
+                          className="filter-chip action-save-button"
+                          onClick={() => handleCreateActionFromSuggestion(item)}
+                          disabled={isSavingAction === `${copilotAnswer.generatedAt}-${item}`}
+                        >
+                          {isSavingAction === `${copilotAnswer.generatedAt}-${item}` ? '저장 중...' : '액션으로 저장'}
+                        </button>
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -603,6 +670,50 @@ export function AssistantPage() {
             </div>
           ) : (
             <p className="assistant-summary">아직 질문하지 않았어. 코파일럿에게 지금 우선순위나 다음 액션을 물어보면 돼.</p>
+          )}
+        </article>
+      </section>
+
+      <section className="assistant-grid">
+        <article className="assistant-card assistant-history-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Action Tracker</p>
+              <h2>실행 액션 추적</h2>
+            </div>
+            <span className="tag-chip">OPEN {openActionsCount}</span>
+          </div>
+          {actions.length === 0 ? (
+            <p className="assistant-summary">아직 저장된 액션이 없어. 답변의 Suggested Actions에서 바로 저장해봐.</p>
+          ) : (
+            <div className="briefing-history-list">
+              {actions.map((action) => (
+                <article key={action.id} className="briefing-history-item">
+                  <div className="project-card-header">
+                    <div>
+                      <h3>{action.title}</h3>
+                      <span className="project-category">{formatDateTime(action.createdAt)}</span>
+                    </div>
+                    <span className="tag-chip">{action.status}</span>
+                  </div>
+                  <p className="project-summary">질문: {action.sourceQuestion}</p>
+                  <div className="assistant-tags">
+                    <button
+                      type="button"
+                      className="history-toggle-button"
+                      onClick={() => handleActionStatusChange(action.id, action.status === 'OPEN' ? 'DONE' : 'OPEN')}
+                      disabled={updatingActionId === action.id}
+                    >
+                      {updatingActionId === action.id
+                        ? '변경 중...'
+                        : action.status === 'OPEN'
+                          ? 'DONE 처리'
+                          : 'OPEN으로 되돌리기'}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
           )}
         </article>
       </section>

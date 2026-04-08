@@ -461,7 +461,7 @@ a {
 
 .assistant-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -684,6 +684,11 @@ a {
 .filter-chip:disabled {
   opacity: 0.55;
   cursor: default;
+}
+
+.action-save-button {
+  margin-top: 8px;
+  justify-self: start;
 }
 
 .briefing-history-list {
