@@ -641,6 +641,10 @@ a {
   gap: 14px;
 }
 
+.assistant-inline-search {
+  margin-top: 14px;
+}
+
 .idea-form label {
   display: grid;
   gap: 8px;
@@ -749,6 +753,11 @@ a {
   border-radius: 20px;
   background: #f8fafc;
   border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.history-card-tags {
+  margin-top: 0;
+  justify-content: flex-end;
 }
 
 .action-card {

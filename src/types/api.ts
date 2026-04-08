@@ -153,6 +153,7 @@ export type AssistantCopilotHistory = {
   id: string
   question: string
   answer: string
+  intent: 'PRIORITY' | 'TIME' | 'IDEA' | 'RISK' | 'SUMMARY'
   reasoning: string[]
   suggestedActions: string[]
   source: string

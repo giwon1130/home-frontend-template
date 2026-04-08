@@ -37,8 +37,11 @@ export function AssistantPage() {
   const [editingRawText, setEditingRawText] = useState('')
   const [editingTags, setEditingTags] = useState('')
   const [ideaFilter, setIdeaFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'DONE'>('ALL')
+  const [ideaSearch, setIdeaSearch] = useState('')
   const [actionFilter, setActionFilter] = useState<'ALL' | 'OPEN' | 'DONE'>('ALL')
   const [actionFocusFilter, setActionFocusFilter] = useState<'ALL' | 'OVERDUE' | 'DUE_SOON' | 'HIGH_PRIORITY'>('ALL')
+  const [historyIntentFilter, setHistoryIntentFilter] = useState<'ALL' | 'PRIORITY' | 'TIME' | 'IDEA' | 'RISK' | 'SUMMARY'>('ALL')
+  const [historySearch, setHistorySearch] = useState('')
   const [updatingIdeaId, setUpdatingIdeaId] = useState<string | null>(null)
   const [isSavingAction, setIsSavingAction] = useState<string | null>(null)
   const [updatingActionId, setUpdatingActionId] = useState<string | null>(null)
@@ -281,6 +284,17 @@ export function AssistantPage() {
   const openActionsCount = actions.filter((action) => action.status === 'OPEN').length
   const filteredIdeas =
     ideaFilter === 'ALL' ? ideas : ideas.filter((idea) => idea.status === ideaFilter)
+  const searchedIdeas = filteredIdeas.filter((idea) => {
+    if (!ideaSearch.trim()) {
+      return true
+    }
+    const keyword = ideaSearch.trim().toLowerCase()
+    return (
+      idea.title.toLowerCase().includes(keyword) ||
+      idea.summary.toLowerCase().includes(keyword) ||
+      idea.tags.some((tag) => tag.toLowerCase().includes(keyword))
+    )
+  })
   const filteredActions =
     actionFilter === 'ALL' ? actions : actions.filter((action) => action.status === actionFilter)
   const focusedActions =
@@ -296,6 +310,17 @@ export function AssistantPage() {
   const uniqueHeadlineSources = new Set((briefing?.headlines ?? []).map((headline) => headline.source)).size
   const leadHeadline = briefing?.headlines[0] ?? latestHistory?.headlines[0] ?? null
   const overdueActionsCount = actions.filter((action) => getDueState(action) === 'OVERDUE').length
+  const filteredCopilotHistory = copilotHistory.filter((item) => {
+    const intentMatched = historyIntentFilter === 'ALL' || item.intent === historyIntentFilter
+    const searchMatched =
+      !historySearch.trim() ||
+      item.question.toLowerCase().includes(historySearch.trim().toLowerCase()) ||
+      item.answer.toLowerCase().includes(historySearch.trim().toLowerCase())
+    return intentMatched && searchMatched
+  })
+  const openIdeasCount = ideas.filter((idea) => idea.status === 'OPEN').length
+  const inProgressIdeasCount = ideas.filter((idea) => idea.status === 'IN_PROGRESS').length
+  const doneIdeasCount = ideas.filter((idea) => idea.status === 'DONE').length
 
   const startActionEdit = (action: AssistantAction) => {
     setEditingActionId(action.id)
@@ -779,18 +804,40 @@ export function AssistantPage() {
               <h2>최근 질문 이력</h2>
             </div>
           </div>
+          <div className="idea-filter-group">
+            <button type="button" className={`filter-chip${historyIntentFilter === 'ALL' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('ALL')}>전체</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'PRIORITY' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('PRIORITY')}>우선순위</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'TIME' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('TIME')}>시간</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'IDEA' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('IDEA')}>아이디어</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'RISK' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('RISK')}>리스크</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'SUMMARY' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('SUMMARY')}>요약</button>
+          </div>
+          <div className="idea-form assistant-inline-search">
+            <label>
+              질문 검색
+              <input
+                type="text"
+                value={historySearch}
+                onChange={(event) => setHistorySearch(event.target.value)}
+                placeholder="질문 또는 답변 내용 검색"
+              />
+            </label>
+          </div>
           <div className="briefing-history-list">
-            {copilotHistory.length === 0 ? (
+            {filteredCopilotHistory.length === 0 ? (
               <p className="assistant-summary">아직 저장된 질문 이력이 없어.</p>
             ) : (
-              copilotHistory.map((item) => (
+              filteredCopilotHistory.map((item) => (
                 <article key={item.id} className="briefing-history-item">
                   <div className="project-card-header">
                     <div>
                       <h3>{item.question}</h3>
                       <span className="project-category">{formatDateTime(item.generatedAt)}</span>
                     </div>
-                    <span className="tag-chip">{item.source}</span>
+                    <div className="assistant-tags history-card-tags">
+                      <span className="tag-chip">{item.source}</span>
+                      <span className="tag-chip">{intentLabels[item.intent]}</span>
+                    </div>
                   </div>
                   <p className="project-summary">{item.answer}</p>
                   <button
@@ -1264,11 +1311,44 @@ export function AssistantPage() {
               ))}
             </div>
           </div>
+          <div className="assistant-subgrid action-summary-grid">
+            <div className="action-summary-card">
+              <span className="control-label">OPEN</span>
+              <strong>{openIdeasCount}</strong>
+              <p>바로 검토 가능한 아이디어</p>
+            </div>
+            <div className="action-summary-card">
+              <span className="control-label">IN PROGRESS</span>
+              <strong>{inProgressIdeasCount}</strong>
+              <p>현재 진행 중인 아이디어</p>
+            </div>
+            <div className="action-summary-card">
+              <span className="control-label">DONE</span>
+              <strong>{doneIdeasCount}</strong>
+              <p>완료 처리된 아이디어</p>
+            </div>
+            <div className="action-summary-card">
+              <span className="control-label">검색 결과</span>
+              <strong>{searchedIdeas.length}</strong>
+              <p>현재 필터 기준으로 보이는 아이디어</p>
+            </div>
+          </div>
+          <div className="idea-form assistant-inline-search">
+            <label>
+              아이디어 검색
+              <input
+                type="text"
+                value={ideaSearch}
+                onChange={(event) => setIdeaSearch(event.target.value)}
+                placeholder="제목, 요약, 태그 검색"
+              />
+            </label>
+          </div>
           <div className="idea-archive">
-            {filteredIdeas.length === 0 ? (
+            {searchedIdeas.length === 0 ? (
               <p className="assistant-summary">아직 저장된 아이디어가 없어.</p>
             ) : (
-              filteredIdeas.map((idea) => (
+              searchedIdeas.map((idea) => (
                 <article key={idea.id} className="idea-card">
                   <div className="project-card-header">
                     <div>
