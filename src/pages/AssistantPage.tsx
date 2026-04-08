@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { askCopilotApi, createActionApi, createIdeaApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, getWeeklyReviewApi, updateActionStatusApi, updateIdeaApi } from '../api/assistantApi'
-import type { AssistantAction, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan, AssistantWeeklyReview } from '../types/api'
+import { askCopilotApi, createActionApi, createIdeaApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, getWeeklyReviewApi, getWeeklyReviewHistoryApi, updateActionApi, updateActionStatusApi, updateIdeaApi } from '../api/assistantApi'
+import type { AssistantAction, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantIdea, AssistantPlan, AssistantWeeklyReview, AssistantWeeklyReviewSnapshot } from '../types/api'
 
 export function AssistantPage() {
   const suggestedQuestions = [
@@ -18,6 +18,7 @@ export function AssistantPage() {
   const [ideas, setIdeas] = useState<AssistantIdea[]>([])
   const [actions, setActions] = useState<AssistantAction[]>([])
   const [weeklyReview, setWeeklyReview] = useState<AssistantWeeklyReview | null>(null)
+  const [weeklyReviewHistory, setWeeklyReviewHistory] = useState<AssistantWeeklyReviewSnapshot[]>([])
   const [title, setTitle] = useState('')
   const [rawText, setRawText] = useState('')
   const [tags, setTags] = useState('')
@@ -40,6 +41,9 @@ export function AssistantPage() {
   const [isSavingAction, setIsSavingAction] = useState<string | null>(null)
   const [updatingActionId, setUpdatingActionId] = useState<string | null>(null)
   const [showFallbackReason, setShowFallbackReason] = useState(false)
+  const [editingActionId, setEditingActionId] = useState<string | null>(null)
+  const [editingActionPriority, setEditingActionPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH'>('MEDIUM')
+  const [editingActionDueDate, setEditingActionDueDate] = useState('')
 
   const intentLabels: Record<AssistantCopilotAskResponse['intent'], string> = {
     PRIORITY: '우선순위',
@@ -64,8 +68,8 @@ export function AssistantPage() {
       setIsLoading(true)
     }
 
-    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi(), getActionsApi(), getWeeklyReviewApi()])
-      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse, actionsResponse, weeklyReviewResponse]) => {
+    Promise.all([getTodayBriefingApi(), getBriefingHistoryApi(), getTodayCopilotApi(), getCopilotHistoryApi(), getTodayPlanApi(), getIdeasApi(), getActionsApi(), getWeeklyReviewApi(), getWeeklyReviewHistoryApi()])
+      .then(([briefingResponse, historyResponse, copilotResponse, copilotHistoryResponse, planResponse, ideasResponse, actionsResponse, weeklyReviewResponse, weeklyReviewHistoryResponse]) => {
         if (!briefingResponse.success || !briefingResponse.data) {
           throw new Error('briefing')
         }
@@ -98,6 +102,10 @@ export function AssistantPage() {
           throw new Error('weekly-review')
         }
 
+        if (!weeklyReviewHistoryResponse.success || !weeklyReviewHistoryResponse.data) {
+          throw new Error('weekly-review-history')
+        }
+
         setBriefing(briefingResponse.data)
         setBriefingHistory(historyResponse.data)
         setCopilot(copilotResponse.data)
@@ -106,6 +114,7 @@ export function AssistantPage() {
         setIdeas(ideasResponse.data)
         setActions(actionsResponse.data)
         setWeeklyReview(weeklyReviewResponse.data)
+        setWeeklyReviewHistory(weeklyReviewHistoryResponse.data)
         setErrorMessage('')
       })
       .catch(() => {
@@ -207,6 +216,18 @@ export function AssistantPage() {
   const uniqueHeadlineSources = new Set((briefing?.headlines ?? []).map((headline) => headline.source)).size
   const leadHeadline = briefing?.headlines[0] ?? latestHistory?.headlines[0] ?? null
 
+  const startActionEdit = (action: AssistantAction) => {
+    setEditingActionId(action.id)
+    setEditingActionPriority(action.priority)
+    setEditingActionDueDate(action.dueDate ? action.dueDate.slice(0, 16) : '')
+  }
+
+  const resetActionEdit = () => {
+    setEditingActionId(null)
+    setEditingActionPriority('MEDIUM')
+    setEditingActionDueDate('')
+  }
+
   const handleIdeaStatusChange = async (ideaId: string, status: 'OPEN' | 'IN_PROGRESS' | 'DONE') => {
     setUpdatingIdeaId(ideaId)
 
@@ -297,6 +318,7 @@ export function AssistantPage() {
         throw new Error('create-action')
       }
       setActions((previous) => [response.data!, ...previous])
+      loadAssistantData({ silent: true })
       setErrorMessage('')
     } catch {
       setErrorMessage('액션 저장에 실패했습니다.')
@@ -315,9 +337,33 @@ export function AssistantPage() {
       setActions((previous) =>
         previous.map((action) => (action.id === actionId ? response.data! : action))
       )
+      loadAssistantData({ silent: true })
       setErrorMessage('')
     } catch {
       setErrorMessage('액션 상태 변경에 실패했습니다.')
+    } finally {
+      setUpdatingActionId(null)
+    }
+  }
+
+  const handleActionMetaSave = async (actionId: string) => {
+    setUpdatingActionId(actionId)
+    try {
+      const response = await updateActionApi(actionId, {
+        priority: editingActionPriority,
+        dueDate: editingActionDueDate ? new Date(editingActionDueDate).toISOString() : null,
+      })
+      if (!response.success || !response.data) {
+        throw new Error('update-action-meta')
+      }
+      setActions((previous) =>
+        previous.map((action) => (action.id === actionId ? response.data! : action))
+      )
+      loadAssistantData({ silent: true })
+      resetActionEdit()
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('액션 메타 정보 저장에 실패했습니다.')
     } finally {
       setUpdatingActionId(null)
     }
@@ -443,6 +489,17 @@ export function AssistantPage() {
                     ))}
                   </ul>
                 </div>
+              </div>
+              <div className="assistant-secondary-section">
+                <span className="control-label">Review History</span>
+                <ul className="assistant-list compact-list">
+                  {weeklyReviewHistory.slice(0, 4).map((item) => (
+                    <li key={item.id}>
+                      <strong>{formatDateTime(item.generatedAt)}</strong>
+                      <span>{item.summary}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           ) : (
@@ -794,10 +851,56 @@ export function AssistantPage() {
                       <h3>{action.title}</h3>
                       <span className="project-category">{formatDateTime(action.createdAt)}</span>
                     </div>
-                    <span className="tag-chip">{action.status}</span>
+                    <div className="assistant-tags">
+                      <span className="tag-chip">{action.status}</span>
+                      <span className="tag-chip">{action.priority}</span>
+                    </div>
                   </div>
                   <p className="project-summary">질문: {action.sourceQuestion}</p>
+                  <p className="assistant-detail-text">
+                    마감일: {action.dueDate ? formatDateTime(action.dueDate) : '미설정'}
+                  </p>
+                  {editingActionId === action.id ? (
+                    <div className="idea-edit-form">
+                      <label>
+                        우선순위
+                        <select
+                          value={editingActionPriority}
+                          onChange={(event) => setEditingActionPriority(event.target.value as 'LOW' | 'MEDIUM' | 'HIGH')}
+                        >
+                          <option value="HIGH">HIGH</option>
+                          <option value="MEDIUM">MEDIUM</option>
+                          <option value="LOW">LOW</option>
+                        </select>
+                      </label>
+                      <label>
+                        마감일
+                        <input
+                          type="datetime-local"
+                          value={editingActionDueDate}
+                          onChange={(event) => setEditingActionDueDate(event.target.value)}
+                        />
+                      </label>
+                    </div>
+                  ) : null}
                   <div className="assistant-tags">
+                    <button
+                      type="button"
+                      className="history-toggle-button"
+                      onClick={() => editingActionId === action.id ? resetActionEdit() : startActionEdit(action)}
+                    >
+                      {editingActionId === action.id ? '편집 취소' : '우선순위/마감일 편집'}
+                    </button>
+                    {editingActionId === action.id ? (
+                      <button
+                        type="button"
+                        className="history-toggle-button"
+                        onClick={() => handleActionMetaSave(action.id)}
+                        disabled={updatingActionId === action.id}
+                      >
+                        {updatingActionId === action.id ? '저장 중...' : '메타 저장'}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="history-toggle-button"

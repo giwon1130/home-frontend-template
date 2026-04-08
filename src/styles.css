@@ -637,7 +637,8 @@ a {
 }
 
 .idea-edit-form input,
-.idea-edit-form textarea {
+.idea-edit-form textarea,
+.idea-edit-form select {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 16px;

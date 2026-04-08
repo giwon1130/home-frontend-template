@@ -157,6 +157,8 @@ export type AssistantAction = {
   title: string
   sourceQuestion: string
   status: 'OPEN' | 'DONE'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH'
+  dueDate: string | null
   createdAt: string
   updatedAt: string
   completedAt: string | null
@@ -176,4 +178,9 @@ export type AssistantWeeklyReview = {
   wins: string[]
   risks: string[]
   nextFocus: string[]
+}
+
+export type AssistantWeeklyReviewSnapshot = AssistantWeeklyReview & {
+  id: string
+  generatedAt: string
 }

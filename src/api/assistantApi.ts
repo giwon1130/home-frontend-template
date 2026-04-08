@@ -10,6 +10,7 @@ import type {
   AssistantIdea,
   AssistantPlan,
   AssistantWeeklyReview,
+  AssistantWeeklyReviewSnapshot,
 } from '../types/api'
 
 export function getTodayBriefingApi() {
@@ -48,7 +49,11 @@ export function getWeeklyReviewApi() {
   return assistantApiFetch<ApiResponse<AssistantWeeklyReview>>('/api/v1/reviews/weekly')
 }
 
-export function createActionApi(payload: { title: string; sourceQuestion: string }) {
+export function getWeeklyReviewHistoryApi() {
+  return assistantApiFetch<ApiResponse<AssistantWeeklyReviewSnapshot[]>>('/api/v1/reviews/weekly/history')
+}
+
+export function createActionApi(payload: { title: string; sourceQuestion: string; priority?: 'LOW' | 'MEDIUM' | 'HIGH'; dueDate?: string | null }) {
   return assistantApiFetch<ApiResponse<AssistantAction>>('/api/v1/actions', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -59,6 +64,16 @@ export function updateActionStatusApi(actionId: string, status: 'OPEN' | 'DONE')
   return assistantApiFetch<ApiResponse<AssistantAction>>(`/api/v1/actions/${actionId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  })
+}
+
+export function updateActionApi(
+  actionId: string,
+  payload: { title?: string; priority?: 'LOW' | 'MEDIUM' | 'HIGH'; dueDate?: string | null },
+) {
+  return assistantApiFetch<ApiResponse<AssistantAction>>(`/api/v1/actions/${actionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
   })
 }
 
