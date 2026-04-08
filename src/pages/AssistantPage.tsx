@@ -1048,7 +1048,7 @@ export function AssistantPage() {
   }
 
   return (
-    <main className="page-shell">
+    <main className="page-shell assistant-dashboard">
       <header className="assistant-hero">
         <div>
           <p className="eyebrow">AI Assistant</p>
