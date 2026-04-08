@@ -129,6 +129,36 @@ export function AssistantPage() {
     return statusWeight + dueWeight + priorityWeight + dueDateWeight + createdAtWeight
   }
 
+  const toLocalDateTimeValue = (value: Date) => {
+    const offset = value.getTimezoneOffset()
+    const local = new Date(value.getTime() - offset * 60 * 1000)
+    return local.toISOString().slice(0, 16)
+  }
+
+  const buildCandidateDueDate = (kind: 'TODAY' | 'MORNING' | 'END_OF_WEEK') => {
+    const now = new Date()
+    const candidate = new Date(now)
+
+    if (kind === 'TODAY') {
+      candidate.setHours(18, 0, 0, 0)
+      if (candidate <= now) candidate.setDate(candidate.getDate() + 1)
+      return candidate.toISOString()
+    }
+
+    if (kind === 'MORNING') {
+      candidate.setDate(candidate.getDate() + 1)
+      candidate.setHours(9, 0, 0, 0)
+      return candidate.toISOString()
+    }
+
+    const day = candidate.getDay()
+    const diff = day === 5 ? 0 : (5 - day + 7) % 7
+    candidate.setDate(candidate.getDate() + diff)
+    candidate.setHours(18, 0, 0, 0)
+    if (candidate <= now) candidate.setDate(candidate.getDate() + 7)
+    return candidate.toISOString()
+  }
+
   const loadAssistantData = async (options?: { silent?: boolean }) => {
     if (options?.silent) {
       setIsRefreshing(true)
@@ -263,6 +293,7 @@ export function AssistantPage() {
           id: `${response.data.generatedAt}-${response.data.question}`,
           question: response.data.question,
           answer: response.data.answer,
+          intent: response.data.intent,
           reasoning: response.data.reasoning,
           suggestedActions: response.data.suggestedActions,
           source: response.data.source,
@@ -321,6 +352,47 @@ export function AssistantPage() {
   const openIdeasCount = ideas.filter((idea) => idea.status === 'OPEN').length
   const inProgressIdeasCount = ideas.filter((idea) => idea.status === 'IN_PROGRESS').length
   const doneIdeasCount = ideas.filter((idea) => idea.status === 'DONE').length
+  const actionTitles = new Set(actions.map((action) => action.title.trim().toLowerCase()))
+  const executionCandidates = [
+    copilot?.topPriority
+      ? {
+        title: copilot.topPriority,
+        source: 'Copilot Priority',
+        priority: 'HIGH' as const,
+        dueDate: buildCandidateDueDate('TODAY'),
+      }
+      : null,
+    copilot?.suggestedNextAction
+      ? {
+        title: copilot.suggestedNextAction,
+        source: 'Copilot Next Action',
+        priority: 'HIGH' as const,
+        dueDate: buildCandidateDueDate('TODAY'),
+      }
+      : null,
+    ...((briefing?.tasks ?? []).slice(0, 2).map((task) => ({
+      title: task.title,
+      source: `Morning Briefing · ${task.priority}`,
+      priority: task.priority === 'HIGH' ? 'HIGH' as const : 'MEDIUM' as const,
+      dueDate: buildCandidateDueDate('TODAY'),
+    }))),
+    ...((plan?.topPriorities ?? []).slice(0, 2).map((priority, index) => ({
+      title: priority,
+      source: 'Today Plan',
+      priority: index === 0 ? 'HIGH' as const : 'MEDIUM' as const,
+      dueDate: buildCandidateDueDate(index === 0 ? 'TODAY' : 'MORNING'),
+    }))),
+    ...((weeklyReview?.nextFocus ?? []).slice(0, 2).map((item) => ({
+      title: item,
+      source: 'Weekly Review',
+      priority: 'MEDIUM' as const,
+      dueDate: buildCandidateDueDate('END_OF_WEEK'),
+    }))),
+  ]
+    .filter((item): item is { title: string; source: string; priority: 'LOW' | 'MEDIUM' | 'HIGH'; dueDate: string } => Boolean(item?.title?.trim()))
+    .filter((item, index, collection) =>
+      collection.findIndex((candidate) => candidate.title.trim().toLowerCase() === item.title.trim().toLowerCase()) === index)
+    .slice(0, 6)
 
   const startActionEdit = (action: AssistantAction) => {
     setEditingActionId(action.id)
@@ -432,6 +504,32 @@ export function AssistantPage() {
       setErrorMessage('')
     } catch {
       setErrorMessage('액션 저장에 실패했습니다.')
+    } finally {
+      setIsSavingAction(null)
+    }
+  }
+
+  const handleCreateActionCandidate = async (candidate: { title: string; source: string; priority: 'LOW' | 'MEDIUM' | 'HIGH'; dueDate: string }) => {
+    const key = `candidate-${candidate.title}`
+    setIsSavingAction(key)
+
+    try {
+      const response = await createActionApi({
+        title: candidate.title,
+        sourceQuestion: candidate.source,
+        priority: candidate.priority,
+        dueDate: candidate.dueDate,
+      })
+
+      if (!response.success || !response.data) {
+        throw new Error('candidate-action')
+      }
+
+      setActions((previous) => [response.data!, ...previous])
+      loadAssistantData({ silent: true })
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('실행 후보를 액션으로 저장하지 못했습니다.')
     } finally {
       setIsSavingAction(null)
     }
@@ -793,6 +891,49 @@ export function AssistantPage() {
               )}
             </ul>
           </div>
+        </article>
+
+        <article className="assistant-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Execution Queue</p>
+              <h2>오늘 실행 후보</h2>
+            </div>
+          </div>
+          {executionCandidates.length === 0 ? (
+            <p className="assistant-summary">브리핑과 계획이 채워지면 실행 후보를 여기서 바로 액션으로 만들 수 있어.</p>
+          ) : (
+            <div className="briefing-history-list">
+              {executionCandidates.map((candidate) => {
+                const exists = actionTitles.has(candidate.title.trim().toLowerCase())
+
+                return (
+                  <article key={`${candidate.source}-${candidate.title}`} className="briefing-history-item">
+                    <div className="project-card-header">
+                      <div>
+                        <h3>{candidate.title}</h3>
+                        <span className="project-category">{candidate.source}</span>
+                      </div>
+                      <div className="assistant-tags history-card-tags">
+                        <span className={`tag-chip action-priority-${candidate.priority.toLowerCase()}`}>{candidate.priority}</span>
+                        <span className="tag-chip">{formatDateTime(candidate.dueDate)}</span>
+                      </div>
+                    </div>
+                    <div className="assistant-tags">
+                      <button
+                        type="button"
+                        className="filter-chip action-save-button"
+                        onClick={() => handleCreateActionCandidate(candidate)}
+                        disabled={exists || isSavingAction === `candidate-${candidate.title}`}
+                      >
+                        {exists ? '이미 액션 있음' : isSavingAction === `candidate-${candidate.title}` ? '저장 중...' : '액션으로 저장'}
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
         </article>
       </section>
 
