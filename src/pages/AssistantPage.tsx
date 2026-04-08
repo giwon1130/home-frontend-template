@@ -387,6 +387,8 @@ export function AssistantPage() {
       return
     }
 
+    const suggestedPlan = copilotAnswer.suggestedActionPlans.find((item) => item.title === actionTitle)
+
     const key = `${copilotAnswer.generatedAt}-${actionTitle}`
     setIsSavingAction(key)
 
@@ -394,6 +396,8 @@ export function AssistantPage() {
       const response = await createActionApi({
         title: actionTitle,
         sourceQuestion: copilotAnswer.question,
+        priority: suggestedPlan?.priority,
+        dueDate: suggestedPlan?.dueDate ?? null,
       })
       if (!response.success || !response.data) {
         throw new Error('create-action')
@@ -907,9 +911,21 @@ export function AssistantPage() {
                 <div>
                   <span className="control-label">Suggested Actions</span>
                   <ul className="assistant-list compact-list">
-                    {copilotAnswer.suggestedActions.map((item, index) => (
+                    {copilotAnswer.suggestedActions.map((item, index) => {
+                      const plan = copilotAnswer.suggestedActionPlans.find((candidate) => candidate.title === item)
+
+                      return (
                       <li key={`${item}-${index}`}>
-                        <span>{item}</span>
+                        <div className="suggested-action-block">
+                          <span>{item}</span>
+                          {plan ? (
+                            <div className="assistant-tags suggested-action-meta">
+                              <span className={`tag-chip action-priority-${plan.priority.toLowerCase()}`}>{plan.priority}</span>
+                              <span className="tag-chip">{plan.dueLabel}</span>
+                            </div>
+                          ) : null}
+                          {plan ? <p className="assistant-detail-text suggested-action-reason">{plan.reason}</p> : null}
+                        </div>
                         <button
                           type="button"
                           className="filter-chip action-save-button"
@@ -919,7 +935,7 @@ export function AssistantPage() {
                           {isSavingAction === `${copilotAnswer.generatedAt}-${item}` ? '저장 중...' : '액션으로 저장'}
                         </button>
                       </li>
-                    ))}
+                    )})}
                   </ul>
                 </div>
               </div>

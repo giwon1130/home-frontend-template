@@ -137,6 +137,13 @@ export type AssistantCopilotAskResponse = {
   intent: 'PRIORITY' | 'TIME' | 'IDEA' | 'RISK' | 'SUMMARY'
   reasoning: string[]
   suggestedActions: string[]
+  suggestedActionPlans: Array<{
+    title: string
+    priority: 'LOW' | 'MEDIUM' | 'HIGH'
+    dueDate: string | null
+    dueLabel: string
+    reason: string
+  }>
   source: string
   fallbackReason?: string | null
   generatedAt: string

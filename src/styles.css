@@ -726,6 +726,19 @@ a {
   justify-self: start;
 }
 
+.suggested-action-block {
+  display: grid;
+  gap: 8px;
+}
+
+.suggested-action-meta {
+  margin-top: 0;
+}
+
+.suggested-action-reason {
+  font-size: 13px;
+}
+
 .briefing-history-list {
   display: grid;
   gap: 14px;
