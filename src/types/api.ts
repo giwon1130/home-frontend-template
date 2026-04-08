@@ -192,8 +192,22 @@ export type AssistantDailyRoutine = {
   streakDays: number
   weeklyCompletionRate: number
   weeklyCompletedDays: number
+  energyScore: number
+  recoveryScore: number
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
   insight: string
   suggestedActions: string[]
+  signals: Array<{
+    label: string
+    status: 'GOOD' | 'WATCH' | 'ALERT' | 'READY'
+    detail: string
+  }>
+  focusMode: {
+    title: string
+    durationMinutes: number
+    summary: string
+    trigger: string
+  }
   reminders: Array<{
     itemKey: string
     label: string

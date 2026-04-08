@@ -114,6 +114,30 @@ export function AssistantPage() {
     }
   }
 
+  const getRoutineRiskLabel = (riskLevel: AssistantDailyRoutine['riskLevel']) => {
+    switch (riskLevel) {
+      case 'HIGH':
+        return '즉시 복구'
+      case 'MEDIUM':
+        return '관리 필요'
+      default:
+        return '안정'
+    }
+  }
+
+  const getRoutineSignalLabel = (status: AssistantDailyRoutine['signals'][number]['status']) => {
+    switch (status) {
+      case 'GOOD':
+        return '양호'
+      case 'WATCH':
+        return '주의'
+      case 'ALERT':
+        return '경고'
+      default:
+        return '준비'
+    }
+  }
+
   const getActionSortWeight = (action: AssistantAction) => {
     const dueState = getDueState(action)
     const statusWeight = action.status === 'OPEN' ? 10_000_000_000 : 0
@@ -941,6 +965,58 @@ export function AssistantPage() {
               ? `비타민, 물, 운동, 산책, 약 복용, 수면 준비 같은 생활 루틴을 오늘 기준으로 빠르게 체크하는 영역이야.`
               : 'Daily Check 데이터를 불러오는 중이야.'}
           </p>
+          {dailyRoutine ? (
+            <div className="assistant-subgrid routine-intelligence-grid">
+              <article className="assistant-radar-card routine-score-card">
+                <span className="control-label">Energy Score</span>
+                <strong>{dailyRoutine.energyScore}</strong>
+                <p>식사, 건강, 움직임 루틴을 묶어서 본 오늘의 기초 에너지 점수.</p>
+              </article>
+              <article className="assistant-radar-card routine-score-card">
+                <span className="control-label">Recovery Score</span>
+                <strong>{dailyRoutine.recoveryScore}</strong>
+                <p>최근 7일 흐름과 수면 준비 상태를 반영한 회복 점수.</p>
+              </article>
+              <article className="assistant-radar-card routine-score-card">
+                <span className="control-label">Risk Level</span>
+                <strong>{getRoutineRiskLabel(dailyRoutine.riskLevel)}</strong>
+                <p>오늘 루틴 누락이 컨디션 저하로 이어질 가능성을 압축한 상태값.</p>
+              </article>
+            </div>
+          ) : null}
+          {dailyRoutine ? (
+            <div className="assistant-subgrid routine-intelligence-grid">
+              <div className="assistant-insight-panel routine-focus-panel">
+                <span className="control-label">Focus Mode</span>
+                <strong>{dailyRoutine.focusMode.title}</strong>
+                <p className="assistant-detail-text">{dailyRoutine.focusMode.summary}</p>
+                <div className="assistant-tags">
+                  <span className="tag-chip">{dailyRoutine.focusMode.durationMinutes}분 블록</span>
+                  <span className="tag-chip">{dailyRoutine.focusMode.trigger}</span>
+                </div>
+                <div className="assistant-tags">
+                  <button
+                    type="button"
+                    className="filter-chip"
+                    onClick={() => setQuestion(`${dailyRoutine.focusMode.title} 모드로 오늘 일정을 어떻게 재배치하면 좋을까?`)}
+                  >
+                    코파일럿에게 묻기
+                  </button>
+                </div>
+              </div>
+              <div className="assistant-secondary-section routine-signal-panel">
+                <span className="control-label">Body Signals</span>
+                <ul className="assistant-list compact-list">
+                  {dailyRoutine.signals.map((signal) => (
+                    <li key={signal.label}>
+                      <strong>{signal.label} · {getRoutineSignalLabel(signal.status)}</strong>
+                      <span>{signal.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
           {dailyRoutine ? (
             <div className="assistant-insight-panel routine-insight-panel">
               <span className="control-label">Routine Insight</span>
