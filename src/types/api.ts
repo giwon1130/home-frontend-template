@@ -190,6 +190,8 @@ export type AssistantDailyRoutine = {
   streakDays: number
   weeklyCompletionRate: number
   weeklyCompletedDays: number
+  insight: string
+  suggestedActions: string[]
   recentDays: Array<{
     date: string
     completedCount: number

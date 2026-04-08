@@ -769,6 +769,24 @@ export function AssistantPage() {
     }
   }
 
+  const handleRoutineNotePreset = async (itemKey: string, note: string, completed = false) => {
+    setUpdatingRoutineKey(itemKey)
+
+    try {
+      const response = await updateDailyRoutineApi(itemKey, { completed, note })
+      if (!response.success || !response.data) {
+        throw new Error('routine-note')
+      }
+      setDailyRoutine(response.data)
+      await loadAssistantData({ silent: true })
+      setErrorMessage('')
+    } catch {
+      setErrorMessage('루틴 메모 저장에 실패했습니다.')
+    } finally {
+      setUpdatingRoutineKey(null)
+    }
+  }
+
   const handleCreateActionFromRoutine = async (itemKey: string, label: string, targetTime: string, category: string) => {
     const key = `routine-${itemKey}`
     setIsSavingAction(key)
@@ -906,6 +924,24 @@ export function AssistantPage() {
               : 'Daily Check 데이터를 불러오는 중이야.'}
           </p>
           {dailyRoutine ? (
+            <div className="assistant-insight-panel routine-insight-panel">
+              <span className="control-label">Routine Insight</span>
+              <p className="assistant-detail-text">{dailyRoutine.insight}</p>
+              <div className="assistant-tags">
+                {dailyRoutine.suggestedActions.map((action) => (
+                  <button
+                    key={action}
+                    type="button"
+                    className="filter-chip"
+                    onClick={() => setQuestion(`${action}를 오늘 어떤 순서로 처리하면 좋을까?`)}
+                  >
+                    {action}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {dailyRoutine ? (
             <div className="routine-list">
               {dailyRoutine.items.map((item) => (
                 <article
@@ -923,6 +959,42 @@ export function AssistantPage() {
                       {item.completedAt ? <span className="tag-chip">{formatDateTime(item.completedAt)}</span> : null}
                       {item.note ? <span className="tag-chip">{item.note}</span> : null}
                     </div>
+                    {!item.completed ? (
+                      <div className="assistant-tags routine-note-presets">
+                        <button
+                          type="button"
+                          className="filter-chip"
+                          onClick={() => handleRoutineNotePreset(item.key, '까먹음')}
+                          disabled={updatingRoutineKey === item.key}
+                        >
+                          까먹음
+                        </button>
+                        <button
+                          type="button"
+                          className="filter-chip"
+                          onClick={() => handleRoutineNotePreset(item.key, '외출 중')}
+                          disabled={updatingRoutineKey === item.key}
+                        >
+                          외출 중
+                        </button>
+                        <button
+                          type="button"
+                          className="filter-chip"
+                          onClick={() => handleRoutineNotePreset(item.key, '저녁에 할 예정')}
+                          disabled={updatingRoutineKey === item.key}
+                        >
+                          저녁에 할 예정
+                        </button>
+                        <button
+                          type="button"
+                          className="filter-chip"
+                          onClick={() => handleRoutineNotePreset(item.key, '완료했는데 기록 안함', true)}
+                          disabled={updatingRoutineKey === item.key}
+                        >
+                          이미 했음
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="routine-item-actions">
                     <button

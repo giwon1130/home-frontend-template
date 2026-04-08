@@ -627,6 +627,14 @@ a {
   justify-items: end;
 }
 
+.routine-insight-panel {
+  margin-top: 18px;
+}
+
+.routine-note-presets {
+  margin-top: 12px;
+}
+
 .assistant-insight-panel {
   height: 100%;
   padding: 16px;
