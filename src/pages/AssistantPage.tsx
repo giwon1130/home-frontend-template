@@ -151,6 +151,19 @@ export function AssistantPage() {
     }
   }
 
+  const getOperatingModeLabel = (code: AssistantCopilot['operatingMode']['code']) => {
+    switch (code) {
+      case 'RESET':
+        return '리셋'
+      case 'RECOVERY':
+        return '회복'
+      case 'DEEP_FOCUS':
+        return '딥포커스'
+      default:
+        return '안정'
+    }
+  }
+
   const getActionSortWeight = (action: AssistantAction) => {
     const dueState = getDueState(action)
     const statusWeight = action.status === 'OPEN' ? 10_000_000_000 : 0
@@ -942,6 +955,23 @@ export function AssistantPage() {
           <p className="hero-summary">
             아침 브리핑, 오늘 계획, 아이디어 저장을 한 화면에서 다루는 개인용 보조 공간
           </p>
+          {copilot ? (
+            <div className="assistant-news-highlight">
+              <span className="control-label">Today Mode</span>
+              <strong>{copilot.operatingMode.title} · {getOperatingModeLabel(copilot.operatingMode.code)}</strong>
+              <p>{copilot.operatingMode.summary}</p>
+              <div className="assistant-tags">
+                <span className="tag-chip">권장 블록 {copilot.operatingMode.recommendedBlockMinutes}분</span>
+                <button
+                  type="button"
+                  className="filter-chip"
+                  onClick={() => setQuestion(`${copilot.operatingMode.title} 기준으로 오늘 일정을 어떻게 운영하면 좋을까?`)}
+                >
+                  모드 기준으로 질문하기
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div className="hero-actions">
             <button
               className="secondary-link action-button"

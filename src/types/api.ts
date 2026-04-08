@@ -113,6 +113,12 @@ export type AssistantIdea = {
 
 export type AssistantCopilot = {
   generatedAt: string
+  operatingMode: {
+    code: 'RESET' | 'RECOVERY' | 'DEEP_FOCUS' | 'STEADY'
+    title: string
+    summary: string
+    recommendedBlockMinutes: number
+  }
   headline: string
   overview: string
   topPriority: string
