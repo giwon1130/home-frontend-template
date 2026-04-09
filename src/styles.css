@@ -888,8 +888,8 @@ a {
 
 .routine-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
   align-items: start;
   padding: 18px 20px;
   border-radius: 22px;
@@ -918,9 +918,10 @@ a {
 }
 
 .routine-item-actions {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  justify-items: end;
+  justify-content: flex-start;
 }
 
 .routine-insight-panel {
