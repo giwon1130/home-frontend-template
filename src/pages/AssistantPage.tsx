@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { askCopilotApi, createActionApi, createIdeaApi, getActionSummaryApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getDailyConditionApi, getDailyRoutineApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, getWeeklyReviewApi, getWeeklyReviewHistoryApi, updateActionApi, updateActionStatusApi, updateDailyConditionApi, updateDailyRoutineApi, updateIdeaApi } from '../api/assistantApi'
 import type { AssistantAction, AssistantActionSummary, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantDailyCondition, AssistantDailyRoutine, AssistantIdea, AssistantPlan, AssistantWeeklyReview, AssistantWeeklyReviewSnapshot } from '../types/api'
 
 export function AssistantPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const suggestedQuestions = [
     '오늘 뭐부터 하면 좋을까?',
     '지금 열어둔 아이디어 중 뭘 먼저 진행할까?',
@@ -182,18 +183,26 @@ export function AssistantPage() {
     }))
   }
 
-  const scrollToSection = (sectionId: string) => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  const tab = searchParams.get('tab')
+  const activeTab: 'dashboard' | 'execution' | 'records' | 'ideas' =
+    tab === 'execution' || tab === 'records' || tab === 'ideas' ? tab : 'dashboard'
 
-  const quickSections = [
-    { id: 'condition-section', label: '컨디션' },
-    { id: 'routine-section', label: '루틴' },
-    { id: 'copilot-section', label: '코파일럿' },
-    { id: 'execution-section', label: '실행 후보' },
-    { id: 'actions-section', label: '액션' },
-    { id: 'ideas-section', label: '아이디어' },
+  const assistantTabs = [
+    { key: 'dashboard', label: '대시보드', summary: '상태 판단과 오늘 모드' },
+    { key: 'execution', label: '실행', summary: '브리핑, 질문, 액션' },
+    { key: 'records', label: '기록', summary: '회고와 히스토리' },
+    { key: 'ideas', label: '아이디어', summary: '캡처와 아카이브' },
   ] as const
+
+  const handleTabChange = (nextTab: typeof assistantTabs[number]['key']) => {
+    const nextParams = new URLSearchParams(searchParams)
+    if (nextTab === 'dashboard') {
+      nextParams.delete('tab')
+    } else {
+      nextParams.set('tab', nextTab)
+    }
+    setSearchParams(nextParams, { replace: true })
+  }
 
   const getModeActionBoost = (action: AssistantAction) => {
     const mode = copilot?.operatingMode.code
@@ -1168,26 +1177,22 @@ export function AssistantPage() {
         </article>
       </section>
 
-      <section className="assistant-quick-nav">
-        {[
-          ['condition-section', '컨디션'],
-          ['routine-section', '루틴'],
-          ['copilot-section', '코파일럿'],
-          ['execution-section', '실행 후보'],
-          ['actions-section', '액션'],
-          ['ideas-section', '아이디어'],
-        ].map(([sectionId, label]) => (
+      <section className="assistant-tab-bar">
+        {assistantTabs.map((item) => (
           <button
-            key={sectionId}
+            key={item.key}
             type="button"
-            className="filter-chip assistant-quick-nav-chip"
-            onClick={() => scrollToSection(sectionId)}
+            className={`assistant-tab-button ${activeTab === item.key ? 'active' : ''}`}
+            onClick={() => handleTabChange(item.key)}
           >
-            {label}
+            <strong>{item.label}</strong>
+            <span>{item.summary}</span>
           </button>
         ))}
       </section>
 
+      {activeTab === 'dashboard' ? (
+        <>
       <section className="assistant-grid">
         <article className="assistant-card" id="condition-section">
           <div className="section-heading">
@@ -1591,6 +1596,11 @@ export function AssistantPage() {
         </article>
       </section>
 
+        </>
+      ) : null}
+
+      {activeTab === 'records' ? (
+        <>
       <section className="assistant-grid">
         <article className="assistant-card assistant-history-card">
           <div className="section-heading">
@@ -1663,7 +1673,11 @@ export function AssistantPage() {
           )}
         </article>
       </section>
+        </>
+      ) : null}
 
+      {activeTab === 'execution' ? (
+        <>
       <section className="assistant-grid">
         <article className="assistant-card assistant-copilot-card" id="copilot-section">
           <div className="section-heading">
@@ -2309,6 +2323,11 @@ export function AssistantPage() {
         </article>
       </section>
 
+        </>
+      ) : null}
+
+      {activeTab === 'records' ? (
+        <>
       <section className="assistant-grid">
         <article className="assistant-card" id="ideas-section">
           <div className="section-heading">
@@ -2427,6 +2446,11 @@ export function AssistantPage() {
         </article>
       </section>
 
+        </>
+      ) : null}
+
+      {activeTab === 'ideas' ? (
+        <>
       <section className="assistant-grid assistant-bottom-grid">
         <article className="assistant-card">
           <div className="section-heading">
@@ -2661,6 +2685,8 @@ export function AssistantPage() {
           </div>
         </article>
       </section>
+        </>
+      ) : null}
     </main>
   )
 }
