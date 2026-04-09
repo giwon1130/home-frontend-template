@@ -1727,6 +1727,29 @@ export function AssistantPage() {
 
       {activeTab === 'execution' ? (
         <>
+      <section className="assistant-overview-grid">
+        <article className="assistant-overview-card assistant-overview-card-primary">
+          <span className="control-label">Execution Focus</span>
+          <strong>{copilot?.topPriority ?? '우선순위 계산 중'}</strong>
+          <p>{copilot?.suggestedNextAction ?? '오늘 실행 우선순위를 불러오는 중이야.'}</p>
+        </article>
+        <article className="assistant-overview-card">
+          <span className="control-label">Queue</span>
+          <strong>{executionCandidates.length}개</strong>
+          <p>{executionCandidates.length > 0 ? executionCandidates[0].title : '실행 후보를 만드는 중이야.'}</p>
+        </article>
+        <article className="assistant-overview-card">
+          <span className="control-label">Action Load</span>
+          <strong>{openActionsCount}건</strong>
+          <p>{overdueActionsCount > 0 ? `지연 ${overdueActionsCount}건 포함` : '열린 액션을 정리하면 돼.'}</p>
+        </article>
+        <article className="assistant-overview-card assistant-overview-card-accent">
+          <span className="control-label">Question</span>
+          <strong>{copilotAnswer ? intentLabels[copilotAnswer.intent] : '질문 대기'}</strong>
+          <p>{copilotAnswer?.answer ?? '막히는 지점이 있으면 아래 질문 카드에서 바로 물어보면 돼.'}</p>
+        </article>
+      </section>
+
       <section className="assistant-grid">
         <article className="assistant-card assistant-copilot-card" id="copilot-section">
           <div className="section-heading">
@@ -1986,108 +2009,6 @@ export function AssistantPage() {
               })}
             </div>
           )}
-        </article>
-      </section>
-
-      <section className="assistant-grid">
-        <article className="assistant-card assistant-history-card">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Copilot History</p>
-              <h2>최근 질문 이력</h2>
-            </div>
-          </div>
-          <div className="idea-filter-group">
-            <button type="button" className={`filter-chip${historyIntentFilter === 'ALL' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('ALL')}>전체</button>
-            <button type="button" className={`filter-chip${historyIntentFilter === 'PRIORITY' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('PRIORITY')}>우선순위</button>
-            <button type="button" className={`filter-chip${historyIntentFilter === 'TIME' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('TIME')}>시간</button>
-            <button type="button" className={`filter-chip${historyIntentFilter === 'IDEA' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('IDEA')}>아이디어</button>
-            <button type="button" className={`filter-chip${historyIntentFilter === 'RISK' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('RISK')}>리스크</button>
-            <button type="button" className={`filter-chip${historyIntentFilter === 'SUMMARY' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('SUMMARY')}>요약</button>
-          </div>
-          <div className="idea-form assistant-inline-search">
-            <label>
-              질문 검색
-              <input
-                type="text"
-                value={historySearch}
-                onChange={(event) => setHistorySearch(event.target.value)}
-                placeholder="질문 또는 답변 내용 검색"
-              />
-            </label>
-          </div>
-          <div className="briefing-history-list">
-            {filteredCopilotHistory.length === 0 ? (
-              <p className="assistant-summary">아직 저장된 질문 이력이 없어.</p>
-            ) : (
-              filteredCopilotHistory.map((item) => (
-                <article key={item.id} className="briefing-history-item">
-                  <div className="project-card-header">
-                    <div>
-                      <h3>{item.question}</h3>
-                      <span className="project-category">{formatDateTime(item.generatedAt)}</span>
-                    </div>
-                    <div className="assistant-tags history-card-tags">
-                      <span className="tag-chip">{item.source}</span>
-                      <span className="tag-chip">{intentLabels[item.intent]}</span>
-                    </div>
-                  </div>
-                  <p className="project-summary">{item.answer}</p>
-                  <button
-                    className="history-toggle-button"
-                    type="button"
-                    onClick={() => handleReuseQuestion(item.question)}
-                  >
-                    다시 질문하기
-                  </button>
-                  <div className="history-detail-grid">
-                    <div>
-                      <span className="control-label">Reasoning</span>
-                      <ul className="assistant-list compact-list">
-                        {item.reasoning.map((reason) => (
-                          <li key={`${item.id}-${reason}`}>{reason}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <span className="control-label">Suggested Actions</span>
-                      <ul className="assistant-list compact-list">
-                        {item.suggestedActions.map((action) => (
-                          <li key={`${item.id}-${action}`}>
-                            <div className="suggested-action-block">
-                              <span>{action}</span>
-                              <p className="assistant-detail-text suggested-action-reason">
-                                {item.intent === 'PRIORITY' || item.intent === 'RISK'
-                                  ? '우선순위 판단이나 리스크 대응과 연결된 액션이라 바로 등록해두는 편이 좋다.'
-                                  : item.intent === 'TIME'
-                                    ? '시간 블록과 연결된 답변이라 오늘 일정 안으로 넣기 좋다.'
-                                    : '질문 이력에서 바로 실행으로 연결할 수 있는 액션이다.'}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              className="filter-chip action-save-button"
-                              onClick={() => handleCreateActionFromHistory(item, action)}
-                              disabled={
-                                actionTitles.has(action.trim().toLowerCase()) ||
-                                isSavingAction === `history-${item.id}-${action}`
-                              }
-                            >
-                              {actionTitles.has(action.trim().toLowerCase())
-                                ? '이미 액션 있음'
-                                : isSavingAction === `history-${item.id}-${action}`
-                                  ? '저장 중...'
-                                  : '액션으로 저장'}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
         </article>
       </section>
 
@@ -2377,6 +2298,108 @@ export function AssistantPage() {
 
       {activeTab === 'records' ? (
         <>
+      <section className="assistant-grid">
+        <article className="assistant-card assistant-history-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Copilot History</p>
+              <h2>최근 질문 이력</h2>
+            </div>
+          </div>
+          <div className="idea-filter-group">
+            <button type="button" className={`filter-chip${historyIntentFilter === 'ALL' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('ALL')}>전체</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'PRIORITY' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('PRIORITY')}>우선순위</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'TIME' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('TIME')}>시간</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'IDEA' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('IDEA')}>아이디어</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'RISK' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('RISK')}>리스크</button>
+            <button type="button" className={`filter-chip${historyIntentFilter === 'SUMMARY' ? ' active' : ''}`} onClick={() => setHistoryIntentFilter('SUMMARY')}>요약</button>
+          </div>
+          <div className="idea-form assistant-inline-search">
+            <label>
+              질문 검색
+              <input
+                type="text"
+                value={historySearch}
+                onChange={(event) => setHistorySearch(event.target.value)}
+                placeholder="질문 또는 답변 내용 검색"
+              />
+            </label>
+          </div>
+          <div className="briefing-history-list">
+            {filteredCopilotHistory.length === 0 ? (
+              <p className="assistant-summary">아직 저장된 질문 이력이 없어.</p>
+            ) : (
+              filteredCopilotHistory.map((item) => (
+                <article key={item.id} className="briefing-history-item">
+                  <div className="project-card-header">
+                    <div>
+                      <h3>{item.question}</h3>
+                      <span className="project-category">{formatDateTime(item.generatedAt)}</span>
+                    </div>
+                    <div className="assistant-tags history-card-tags">
+                      <span className="tag-chip">{item.source}</span>
+                      <span className="tag-chip">{intentLabels[item.intent]}</span>
+                    </div>
+                  </div>
+                  <p className="project-summary">{item.answer}</p>
+                  <button
+                    className="history-toggle-button"
+                    type="button"
+                    onClick={() => handleReuseQuestion(item.question)}
+                  >
+                    다시 질문하기
+                  </button>
+                  <div className="history-detail-grid">
+                    <div>
+                      <span className="control-label">Reasoning</span>
+                      <ul className="assistant-list compact-list">
+                        {item.reasoning.map((reason) => (
+                          <li key={`${item.id}-${reason}`}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <span className="control-label">Suggested Actions</span>
+                      <ul className="assistant-list compact-list">
+                        {item.suggestedActions.map((action) => (
+                          <li key={`${item.id}-${action}`}>
+                            <div className="suggested-action-block">
+                              <span>{action}</span>
+                              <p className="assistant-detail-text suggested-action-reason">
+                                {item.intent === 'PRIORITY' || item.intent === 'RISK'
+                                  ? '우선순위 판단이나 리스크 대응과 연결된 액션이라 바로 등록해두는 편이 좋다.'
+                                  : item.intent === 'TIME'
+                                    ? '시간 블록과 연결된 답변이라 오늘 일정 안으로 넣기 좋다.'
+                                    : '질문 이력에서 바로 실행으로 연결할 수 있는 액션이다.'}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="filter-chip action-save-button"
+                              onClick={() => handleCreateActionFromHistory(item, action)}
+                              disabled={
+                                actionTitles.has(action.trim().toLowerCase()) ||
+                                isSavingAction === `history-${item.id}-${action}`
+                              }
+                            >
+                              {actionTitles.has(action.trim().toLowerCase())
+                                ? '이미 액션 있음'
+                                : isSavingAction === `history-${item.id}-${action}`
+                                  ? '저장 중...'
+                                  : '액션으로 저장'}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </article>
+      </section>
+
       <section className="assistant-grid">
         <article className="assistant-card" id="ideas-section">
           <div className="section-heading">
