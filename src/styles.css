@@ -799,6 +799,17 @@ a {
   margin-top: 20px;
 }
 
+.section-heading-inline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading-inline .assistant-summary {
+  margin: 6px 0 0;
+}
+
 .assistant-radar-card {
   padding: 18px;
   border-radius: 22px;

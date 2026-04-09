@@ -57,6 +57,7 @@ export function AssistantPage() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     condition: true,
     routine: true,
+    routineCompleted: true,
     copilot: false,
     briefing: true,
     plan: true,
@@ -619,6 +620,7 @@ export function AssistantPage() {
   const recentIdeasCount = ideas.filter((idea) => idea.status === 'OPEN' || idea.status === 'IN_PROGRESS').length
   const openActionsCount = actions.filter((action) => action.status === 'OPEN').length
   const incompleteRoutineItems = dailyRoutine?.items.filter((item) => !item.completed) ?? []
+  const completedRoutineItems = dailyRoutine?.items.filter((item) => item.completed) ?? []
   const filteredIdeas =
     ideaFilter === 'ALL' ? ideas : ideas.filter((idea) => idea.status === ideaFilter)
   const searchedIdeas = filteredIdeas.filter((idea) => {
@@ -656,11 +658,8 @@ export function AssistantPage() {
       item.answer.toLowerCase().includes(historySearch.trim().toLowerCase())
     return intentMatched && searchMatched
   })
-  const openIdeasCount = ideas.filter((idea) => idea.status === 'OPEN').length
   const inProgressIdeasCount = ideas.filter((idea) => idea.status === 'IN_PROGRESS').length
-  const doneIdeasCount = ideas.filter((idea) => idea.status === 'DONE').length
   const highSignalIdeasCount = ideas.filter((idea) => getIdeaSignalLabel(idea) === '핵심').length
-  const mediumSignalIdeasCount = ideas.filter((idea) => getIdeaSignalLabel(idea) === '유망').length
   const actionTitles = new Set(actions.map((action) => action.title.trim().toLowerCase()))
   const sortedIdeas = [...searchedIdeas].sort((left, right) => {
     const signalDelta = getIdeaSignalScore(right) - getIdeaSignalScore(left)
@@ -1408,38 +1407,36 @@ export function AssistantPage() {
           </div>
         </article>
         <article className="assistant-overview-card">
-          <span className="control-label">Routine Health</span>
-          <strong>{dailyCondition ? `${dailyCondition.readinessScore}점` : '대기 중'}</strong>
-          <p>{dailyCondition?.summary ?? '컨디션 체크인을 불러오는 중이야.'}</p>
+          <span className="control-label">Execution Pulse</span>
+          <strong>{executionCandidates.length}개</strong>
+          <p>{executionCandidates[0]?.title ?? '실행 후보와 열린 액션을 계산하는 중이야.'}</p>
           <div className="assistant-tags">
-            {dailyCondition ? <span className="tag-chip">추세 {getConditionTrendLabel(dailyCondition.trend)}</span> : null}
-            <button type="button" className="filter-chip" onClick={() => handleTabChange('routine')}>
-              루틴 탭 보기
+            <span className="tag-chip">OPEN {openActionsCount}건</span>
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('execution')}>
+              실행 탭 보기
             </button>
           </div>
         </article>
         <article className="assistant-overview-card">
-          <span className="control-label">Routine Snapshot</span>
-          <strong>{dailyRoutine ? `${dailyRoutine.completedCount}/${dailyRoutine.totalCount}` : '대기 중'}</strong>
-          <p>{dailyRoutine?.insight ?? '오늘 루틴 상태를 계산하는 중이야.'}</p>
+          <span className="control-label">Record Snapshot</span>
+          <strong>{weeklyReview ? `${weeklyReview.metrics.actionsCompleted}건 완료` : `${filteredCopilotHistory.length}건`}</strong>
+          <p>{weeklyReview?.summary ?? filteredCopilotHistory[0]?.question ?? '회고와 질문 이력을 정리하는 중이야.'}</p>
           <div className="assistant-tags">
-            {dailyRoutine ? <span className="tag-chip">{getRoutineRiskLabel(dailyRoutine.riskLevel)}</span> : null}
-            <button type="button" className="filter-chip" onClick={() => handleTabChange('routine')}>
-              루틴 탭 보기
+            <span className="tag-chip">질문 {filteredCopilotHistory.length}건</span>
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('records')}>
+              기록 탭 보기
             </button>
           </div>
         </article>
         <article className="assistant-overview-card assistant-overview-card-accent">
-          <span className="control-label">Next Move</span>
-          <strong>{topOpenAction?.title ?? copilot?.suggestedNextAction ?? '다음 액션 계산 중'}</strong>
-          <p>{topRisk ?? '급한 리스크는 아직 없어. 실행 탭에서 액션과 질문을 이어서 처리하면 돼.'}</p>
+          <span className="control-label">Idea Signal</span>
+          <strong>{topSignalIdea?.title ?? '아이디어 신호 계산 중'}</strong>
+          <p>{topSignalIdea ? `${getIdeaSignalLabel(topSignalIdea)} 신호 · ${topSignalIdea.suggestedActions[0] ?? '다음 액션 없음'}` : '아이디어 탭에서 강한 신호를 가진 항목을 먼저 볼 수 있어.'}</p>
           <div className="assistant-tags">
-            <button type="button" className="filter-chip" onClick={() => handleTabChange('records')}>
-              기록 보기
-            </button>
             <button type="button" className="filter-chip" onClick={() => handleTabChange('ideas')}>
               아이디어 보기
             </button>
+            {highSignalIdeasCount > 0 ? <span className="tag-chip">핵심 {highSignalIdeasCount}건</span> : null}
           </div>
         </article>
       </section>
@@ -1691,7 +1688,7 @@ export function AssistantPage() {
           ) : null}
           {dailyRoutine ? (
             <div className="routine-list">
-              {dailyRoutine.items.map((item) => (
+              {incompleteRoutineItems.map((item) => (
                 <article
                   key={item.key}
                   className={`routine-item ${item.completed ? 'routine-item-completed' : ''}`}
@@ -1749,6 +1746,39 @@ export function AssistantPage() {
                   </div>
                 </article>
               ))}
+            </div>
+          ) : null}
+          {completedRoutineItems.length > 0 ? (
+            <div className="assistant-secondary-section">
+              <div className="section-heading section-heading-inline">
+                <div>
+                  <span className="control-label">Completed Today</span>
+                  <p className="assistant-summary">완료한 루틴은 별도로 접어두고 필요할 때만 본다.</p>
+                </div>
+                <button type="button" className="filter-chip" onClick={() => toggleSection('routineCompleted')}>
+                  {collapsedSections.routineCompleted ? `완료 ${completedRoutineItems.length}개 보기` : '완료 항목 접기'}
+                </button>
+              </div>
+              {!collapsedSections.routineCompleted ? (
+                <div className="routine-list">
+                  {completedRoutineItems.map((item) => (
+                    <article key={item.key} className="routine-item routine-item-completed">
+                      <div>
+                        <div className="routine-item-header">
+                          <strong>{item.label}</strong>
+                          <span className="tag-chip">{item.targetTime}</span>
+                        </div>
+                        <p>{item.description}</p>
+                        <div className="assistant-tags history-card-tags">
+                          <span className="tag-chip">{item.category}</span>
+                          {item.completedAt ? <span className="tag-chip">{formatDateTime(item.completedAt)}</span> : null}
+                          {item.note ? <span className="tag-chip">{item.note}</span> : null}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div className="assistant-subgrid action-summary-grid">
@@ -1912,9 +1942,9 @@ export function AssistantPage() {
           <p>{briefingHistory[0]?.summary ?? '브리핑 이력을 아직 불러오는 중이야.'}</p>
         </article>
         <article className="assistant-overview-card assistant-overview-card-accent">
-          <span className="control-label">Lead Signal</span>
-          <strong>{leadHeadline?.source ?? '신호 대기'}</strong>
-          <p>{leadHeadline?.title ?? latestHistory?.summary ?? '기록 탭에서 최근 외부 신호와 저장 이력을 같이 본다.'}</p>
+          <span className="control-label">Review Archive</span>
+          <strong>{weeklyReviewHistory.length}건</strong>
+          <p>{weeklyReviewHistory[0]?.summary ?? '주차별 회고 스냅샷을 기록 탭에서 모아본다.'}</p>
         </article>
       </section>
 
@@ -2669,55 +2699,6 @@ export function AssistantPage() {
       </section>
 
       <section className="assistant-grid">
-        <article className="assistant-card" id="ideas-section">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Signals</p>
-              <h2>헤드라인 및 빠른 판단</h2>
-            </div>
-          </div>
-          <div className="assistant-subgrid">
-            <div>
-              <span className="control-label">Headlines</span>
-              <ul className="assistant-list">
-                {briefing?.headlines.length ? (
-                  briefing.headlines.map((headline) => (
-                    <li key={`${headline.source}-${headline.title}`}>
-                      <strong>{headline.source}</strong>
-                      <span>{headline.title}</span>
-                    </li>
-                  ))
-                ) : (
-                  <li>헤드라인 없음</li>
-                )}
-              </ul>
-            </div>
-            <div>
-              <span className="control-label">Quick Summary</span>
-              <div className="assistant-insight-panel">
-                <p>{latestHistory?.summary ?? briefing?.summary ?? '아직 요약 정보가 없어.'}</p>
-                <div className="assistant-tags">
-                  {(plan?.topPriorities ?? []).slice(0, 3).map((priority) => (
-                    <span key={priority} className="tag-chip">
-                      {priority}
-                    </span>
-                  ))}
-                </div>
-                {leadHeadline ? (
-                  <div className="assistant-secondary-section">
-                    <span className="control-label">Lead Signal</span>
-                    <p className="assistant-detail-text">
-                      {leadHeadline.title} <strong>· {leadHeadline.source}</strong>
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section className="assistant-grid">
         <article className="assistant-card assistant-history-card">
           <div className="section-heading">
             <div>
@@ -2852,8 +2833,8 @@ export function AssistantPage() {
               <p className="eyebrow">Idea Archive</p>
               <h2>저장된 아이디어</h2>
             </div>
-            <div className="idea-filter-group">
-              {(['ALL', 'OPEN', 'IN_PROGRESS', 'DONE'] as const).map((status) => (
+          <div className="idea-filter-group">
+            {(['ALL', 'OPEN', 'IN_PROGRESS', 'DONE'] as const).map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -2863,38 +2844,6 @@ export function AssistantPage() {
                   {status}
                 </button>
               ))}
-            </div>
-          </div>
-          <div className="assistant-subgrid action-summary-grid">
-            <div className="action-summary-card">
-              <span className="control-label">OPEN</span>
-              <strong>{openIdeasCount}</strong>
-              <p>바로 검토 가능한 아이디어</p>
-            </div>
-            <div className="action-summary-card">
-              <span className="control-label">IN PROGRESS</span>
-              <strong>{inProgressIdeasCount}</strong>
-              <p>현재 진행 중인 아이디어</p>
-            </div>
-            <div className="action-summary-card">
-              <span className="control-label">DONE</span>
-              <strong>{doneIdeasCount}</strong>
-              <p>완료 처리된 아이디어</p>
-            </div>
-            <div className="action-summary-card">
-              <span className="control-label">검색 결과</span>
-              <strong>{searchedIdeas.length}</strong>
-              <p>현재 필터 기준으로 보이는 아이디어</p>
-            </div>
-            <div className="action-summary-card">
-              <span className="control-label">핵심 신호</span>
-              <strong>{highSignalIdeasCount}</strong>
-              <p>바로 제품/액션으로 연결할 가치가 높은 아이디어</p>
-            </div>
-            <div className="action-summary-card">
-              <span className="control-label">유망 신호</span>
-              <strong>{mediumSignalIdeasCount}</strong>
-              <p>조금 더 다듬으면 실행 후보가 될 아이디어</p>
             </div>
           </div>
           <div className="idea-form assistant-inline-search">
