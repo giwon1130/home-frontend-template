@@ -239,6 +239,74 @@ export function AssistantPage() {
     }
   })()
 
+  const renderTabContextActions = () => {
+    switch (activeTab) {
+      case 'execution':
+        return (
+          <>
+            <button
+              type="button"
+              className="filter-chip"
+              onClick={() => setQuestion(copilot?.suggestedNextAction ? `${copilot.suggestedNextAction}를 지금 바로 실행하려면 어떤 순서가 좋을까?` : suggestedQuestions[0])}
+            >
+              바로 질문 만들기
+            </button>
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('records')}>
+              기록 보기
+            </button>
+          </>
+        )
+      case 'records':
+        return (
+          <>
+            <button
+              type="button"
+              className="filter-chip"
+              onClick={() => handleReuseQuestion(filteredCopilotHistory[0]?.question ?? suggestedQuestions[0])}
+            >
+              최근 질문 다시 열기
+            </button>
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('execution')}>
+              실행으로 이동
+            </button>
+          </>
+        )
+      case 'ideas':
+        return (
+          <>
+            <button
+              type="button"
+              className="filter-chip"
+              onClick={() => {
+                if (topSignalIdea) handleFocusIdea(topSignalIdea.id)
+              }}
+            >
+              핵심 아이디어 열기
+            </button>
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('execution')}>
+              실행 후보 보기
+            </button>
+          </>
+        )
+      default:
+        return (
+          <>
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('execution')}>
+              실행으로 이동
+            </button>
+            <button
+              type="button"
+              className="filter-chip"
+              onClick={() => loadAssistantData({ silent: true })}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? '새로고침 중...' : '상태 새로고침'}
+            </button>
+          </>
+        )
+    }
+  }
+
   const handleTabChange = (nextTab: typeof assistantTabs[number]['key']) => {
     const nextParams = new URLSearchParams(searchParams)
     if (nextTab === 'dashboard') {
@@ -1242,12 +1310,17 @@ export function AssistantPage() {
           <h2>{activeTabContext.title}</h2>
           <p className="assistant-summary">{activeTabContext.summary}</p>
         </div>
-        <div className="assistant-tags">
-          {activeTabContext.chips.map((chip) => (
-            <span key={chip} className="tag-chip">
-              {chip}
-            </span>
-          ))}
+        <div className="assistant-context-side">
+          <div className="assistant-tags">
+            {activeTabContext.chips.map((chip) => (
+              <span key={chip} className="tag-chip">
+                {chip}
+              </span>
+            ))}
+          </div>
+          <div className="assistant-tags assistant-context-actions">
+            {renderTabContextActions()}
+          </div>
         </div>
       </section>
 

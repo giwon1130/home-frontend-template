@@ -643,6 +643,17 @@ a {
   max-width: 640px;
 }
 
+.assistant-context-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.assistant-context-actions {
+  justify-content: flex-end;
+}
+
 .assistant-quick-nav {
   display: flex;
   flex-wrap: wrap;
@@ -1286,5 +1297,9 @@ a {
 
   .assistant-tab-context {
     align-items: stretch;
+  }
+
+  .assistant-context-side {
+    align-items: flex-start;
   }
 }
