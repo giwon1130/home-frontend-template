@@ -525,6 +525,25 @@ a {
   margin-bottom: 22px;
 }
 
+.assistant-quick-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 22px;
+  position: sticky;
+  top: 14px;
+  z-index: 2;
+  padding: 10px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.assistant-quick-nav-chip {
+  background: rgba(255, 255, 255, 0.94);
+}
+
 .assistant-stat-card {
   position: relative;
   overflow: hidden;

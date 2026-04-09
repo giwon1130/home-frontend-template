@@ -53,6 +53,17 @@ export function AssistantPage() {
   const [editingActionDueDate, setEditingActionDueDate] = useState('')
   const [updatingRoutineKey, setUpdatingRoutineKey] = useState<string | null>(null)
   const [isUpdatingCondition, setIsUpdatingCondition] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    condition: false,
+    routine: false,
+    copilot: false,
+    briefing: true,
+    plan: true,
+    execution: false,
+    actions: false,
+    history: true,
+    ideas: true,
+  })
 
   const intentLabels: Record<AssistantCopilotAskResponse['intent'], string> = {
     PRIORITY: '우선순위',
@@ -163,6 +174,26 @@ export function AssistantPage() {
         return '안정'
     }
   }
+
+  const toggleSection = (key: keyof typeof collapsedSections) => {
+    setCollapsedSections((previous) => ({
+      ...previous,
+      [key]: !previous[key],
+    }))
+  }
+
+  const scrollToSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const quickSections = [
+    { id: 'condition-section', label: '컨디션' },
+    { id: 'routine-section', label: '루틴' },
+    { id: 'copilot-section', label: '코파일럿' },
+    { id: 'execution-section', label: '실행 후보' },
+    { id: 'actions-section', label: '액션' },
+    { id: 'ideas-section', label: '아이디어' },
+  ] as const
 
   const getModeActionBoost = (action: AssistantAction) => {
     const mode = copilot?.operatingMode.code
@@ -1137,8 +1168,28 @@ export function AssistantPage() {
         </article>
       </section>
 
+      <section className="assistant-quick-nav">
+        {[
+          ['condition-section', '컨디션'],
+          ['routine-section', '루틴'],
+          ['copilot-section', '코파일럿'],
+          ['execution-section', '실행 후보'],
+          ['actions-section', '액션'],
+          ['ideas-section', '아이디어'],
+        ].map(([sectionId, label]) => (
+          <button
+            key={sectionId}
+            type="button"
+            className="filter-chip assistant-quick-nav-chip"
+            onClick={() => scrollToSection(sectionId)}
+          >
+            {label}
+          </button>
+        ))}
+      </section>
+
       <section className="assistant-grid">
-        <article className="assistant-card">
+        <article className="assistant-card" id="condition-section">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Condition Check-in</p>
@@ -1147,8 +1198,13 @@ export function AssistantPage() {
             <div className="assistant-tags">
               <span className="tag-chip">{dailyCondition ? `준비도 ${dailyCondition.readinessScore}` : '대기 중'}</span>
               <span className="tag-chip">{dailyCondition ? `추세 ${getConditionTrendLabel(dailyCondition.trend)}` : '추세 대기'}</span>
+              <button type="button" className="filter-chip" onClick={() => toggleSection('condition')}>
+                {collapsedSections.condition ? '펼치기' : '접기'}
+              </button>
             </div>
           </div>
+          {!collapsedSections.condition ? (
+            <>
           <p className="assistant-summary">
             {dailyCondition
               ? '에너지, 집중, 기분, 스트레스, 수면 상태를 5점 기준으로 빠르게 남겨서 오늘 작업 강도를 조절하는 영역이야.'
@@ -1228,9 +1284,13 @@ export function AssistantPage() {
               </div>
             </>
           ) : null}
+            </>
+          ) : (
+            <p className="assistant-summary">핵심 수치만 남기고 컨디션 세부 패널은 접어뒀어.</p>
+          )}
         </article>
 
-        <article className="assistant-card">
+        <article className="assistant-card" id="routine-section">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Daily Check</p>
@@ -1239,8 +1299,13 @@ export function AssistantPage() {
             <div className="assistant-tags">
               <span className="tag-chip">{dailyRoutine ? `${dailyRoutine.completionRate}% 완료` : '대기 중'}</span>
               <span className="tag-chip">{dailyRoutine ? `${dailyRoutine.streakDays}일 연속` : '0일 연속'}</span>
+              <button type="button" className="filter-chip" onClick={() => toggleSection('routine')}>
+                {collapsedSections.routine ? '펼치기' : '접기'}
+              </button>
             </div>
           </div>
+          {!collapsedSections.routine ? (
+            <>
           <p className="assistant-summary">
             {dailyRoutine
               ? `비타민, 물, 운동, 산책, 약 복용, 수면 준비 같은 생활 루틴을 오늘 기준으로 빠르게 체크하는 영역이야.`
@@ -1432,6 +1497,10 @@ export function AssistantPage() {
               </div>
             </div>
           ) : null}
+            </>
+          ) : (
+            <p className="assistant-summary">루틴 상세를 접어두고 오늘 모드와 완료율만 빠르게 볼 수 있어.</p>
+          )}
         </article>
       </section>
 
@@ -1596,14 +1665,20 @@ export function AssistantPage() {
       </section>
 
       <section className="assistant-grid">
-        <article className="assistant-card assistant-copilot-card">
+        <article className="assistant-card assistant-copilot-card" id="copilot-section">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Copilot</p>
               <h2>오늘의 코파일럿</h2>
             </div>
-            <span className="tag-chip">{copilot ? formatDateTime(copilot.generatedAt) : '대기 중'}</span>
+            <div className="assistant-tags">
+              <span className="tag-chip">{copilot ? formatDateTime(copilot.generatedAt) : '대기 중'}</span>
+              <button type="button" className="filter-chip" onClick={() => toggleSection('copilot')}>
+                {collapsedSections.copilot ? '펼치기' : '접기'}
+              </button>
+            </div>
           </div>
+          {!collapsedSections.copilot ? (
           <div className="assistant-copilot-panel">
             <div className="assistant-copilot-highlight">
               <span className="control-label">Top Priority</span>
@@ -1696,9 +1771,12 @@ export function AssistantPage() {
               </ul>
             </div>
           </div>
+          ) : (
+            <p className="assistant-summary">코파일럿 세부 패널을 접어뒀어. Today Mode와 핵심 요약 위주로 볼 수 있다.</p>
+          )}
         </article>
 
-        <article className="assistant-card">
+        <article className="assistant-card" id="execution-section">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Morning Briefing</p>
@@ -2072,7 +2150,7 @@ export function AssistantPage() {
       </section>
 
       <section className="assistant-grid">
-        <article className="assistant-card assistant-history-card">
+        <article className="assistant-card assistant-history-card" id="actions-section">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Action Tracker</p>
@@ -2081,11 +2159,16 @@ export function AssistantPage() {
             <div className="assistant-tags">
               <span className="tag-chip">OPEN {openActionsCount}</span>
               <span className={`tag-chip${overdueActionsCount > 0 ? ' tag-chip-alert' : ''}`}>지연 {overdueActionsCount}</span>
+              <button type="button" className="filter-chip" onClick={() => toggleSection('actions')}>
+                {collapsedSections.actions ? '펼치기' : '접기'}
+              </button>
               <button type="button" className={`filter-chip${actionFilter === 'ALL' ? ' active' : ''}`} onClick={() => setActionFilter('ALL')}>ALL</button>
               <button type="button" className={`filter-chip${actionFilter === 'OPEN' ? ' active' : ''}`} onClick={() => setActionFilter('OPEN')}>OPEN</button>
               <button type="button" className={`filter-chip${actionFilter === 'DONE' ? ' active' : ''}`} onClick={() => setActionFilter('DONE')}>DONE</button>
             </div>
           </div>
+          {!collapsedSections.actions ? (
+            <>
           {actionSummary ? (
             <div className="assistant-subgrid action-summary-grid">
               <div className="action-summary-card">
@@ -2219,11 +2302,15 @@ export function AssistantPage() {
               )})}
             </div>
           )}
+            </>
+          ) : (
+            <p className="assistant-summary">액션 보드를 접어두고 전체 카운트와 지연 개수만 빠르게 볼 수 있어.</p>
+          )}
         </article>
       </section>
 
       <section className="assistant-grid">
-        <article className="assistant-card">
+        <article className="assistant-card" id="ideas-section">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Signals</p>
