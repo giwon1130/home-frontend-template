@@ -1200,6 +1200,31 @@ export function AssistantPage() {
     setEditingActionDueDate(now.toISOString().slice(0, 16))
   }
 
+  const compactStats = (() => {
+    switch (activeTab) {
+      case 'execution':
+        return [
+          { label: 'Execution', value: executionCandidates.length, detail: '실행 후보 수' },
+          { label: 'Open Actions', value: openActionsCount, detail: '남아 있는 액션' },
+          { label: 'Question', value: copilotAnswer ? intentLabels[copilotAnswer.intent] : '대기', detail: '최근 질문 상태' },
+        ]
+      case 'records':
+        return [
+          { label: 'Review', value: weeklyReviewHistory.length, detail: '저장된 회고' },
+          { label: 'History', value: filteredCopilotHistory.length, detail: '질문 이력 수' },
+          { label: 'Briefings', value: briefingHistory.length, detail: '브리핑 이력 수' },
+        ]
+      case 'ideas':
+        return [
+          { label: 'Ideas', value: ideas.length, detail: '저장된 아이디어' },
+          { label: 'High Signal', value: highSignalIdeasCount, detail: '핵심 신호 아이디어' },
+          { label: 'In Progress', value: inProgressIdeasCount, detail: '진행 중 아이디어' },
+        ]
+      default:
+        return []
+    }
+  })()
+
   return (
     <main className="page-shell assistant-dashboard">
       <header className="assistant-hero">
@@ -1257,6 +1282,7 @@ export function AssistantPage() {
 
       {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
 
+      {activeTab === 'dashboard' ? (
       <section className="assistant-stats-grid">
         <article className="assistant-stat-card">
           <span className="control-label">Today</span>
@@ -1289,6 +1315,17 @@ export function AssistantPage() {
           <p>{dailyRoutine ? `오늘 완료율 ${dailyRoutine.completionRate}%` : '루틴 체크를 불러오는 중'}</p>
         </article>
       </section>
+      ) : (
+      <section className="assistant-mini-stats-grid">
+        {compactStats.map((item) => (
+          <article key={item.label} className="assistant-mini-stat-card">
+            <span className="control-label">{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.detail}</p>
+          </article>
+        ))}
+      </section>
+      )}
 
       <section className="assistant-tab-bar">
         {assistantTabs.map((item) => (
