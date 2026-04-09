@@ -184,11 +184,12 @@ export function AssistantPage() {
   }
 
   const tab = searchParams.get('tab')
-  const activeTab: 'dashboard' | 'execution' | 'records' | 'ideas' =
-    tab === 'execution' || tab === 'records' || tab === 'ideas' ? tab : 'dashboard'
+  const activeTab: 'dashboard' | 'routine' | 'execution' | 'records' | 'ideas' =
+    tab === 'routine' || tab === 'execution' || tab === 'records' || tab === 'ideas' ? tab : 'dashboard'
 
   const assistantTabs = [
     { key: 'dashboard', label: '대시보드', summary: '상태 판단과 오늘 모드' },
+    { key: 'routine', label: '루틴', summary: '컨디션과 생활 체크' },
     { key: 'execution', label: '실행', summary: '브리핑, 질문, 액션' },
     { key: 'records', label: '기록', summary: '회고와 히스토리' },
     { key: 'ideas', label: '아이디어', summary: '캡처와 아카이브' },
@@ -196,6 +197,16 @@ export function AssistantPage() {
 
   const activeTabContext = (() => {
     switch (activeTab) {
+      case 'routine':
+        return {
+          title: '컨디션과 루틴을 따로 관리하는 생활 탭',
+          summary: '오늘 몸 상태와 생활 루틴을 한곳에서 보고, 누락된 항목을 바로 회복하는 탭이야.',
+          chips: [
+            dailyCondition ? `준비도 ${dailyCondition.readinessScore}` : '컨디션 대기',
+            dailyRoutine ? `완료율 ${dailyRoutine.completionRate}%` : '루틴 대기',
+            dailyRoutine ? `남은 체크 ${incompleteRoutineItems.length}개` : '체크 대기',
+          ],
+        }
       case 'execution':
         return {
           title: '지금 처리할 것만 남겨둔 실행 공간',
@@ -229,11 +240,11 @@ export function AssistantPage() {
       default:
         return {
           title: '오늘 상태를 먼저 판단하는 대시보드',
-          summary: '컨디션, 루틴, 오늘 모드와 핵심 리스크를 빠르게 읽고 다음 탭으로 넘어가는 시작 화면이야.',
+          summary: '오늘 모드, 핵심 리스크, 다음 행동만 빠르게 읽고 다른 탭으로 넘어가는 시작 화면이야.',
           chips: [
-            dailyCondition ? `준비도 ${dailyCondition.readinessScore}` : '컨디션 대기',
-            dailyRoutine ? `루틴 ${dailyRoutine.completionRate}%` : '루틴 대기',
             copilot ? `모드 ${getOperatingModeLabel(copilot.operatingMode.code)}` : '모드 대기',
+            topRisk ? '리스크 확인 필요' : '리스크 안정',
+            topOpenAction ? '다음 액션 있음' : '액션 대기',
           ],
         }
     }
@@ -241,6 +252,21 @@ export function AssistantPage() {
 
   const renderTabContextActions = () => {
     switch (activeTab) {
+      case 'routine':
+        return (
+          <>
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('execution')}>
+              실행으로 이동
+            </button>
+            <button
+              type="button"
+              className="filter-chip"
+              onClick={() => setQuestion(topIncompleteRoutine ? `${topIncompleteRoutine.label} 체크를 오늘 언제 하는 게 좋을까?` : '오늘 컨디션 기준으로 루틴을 어떻게 회복하면 좋을까?')}
+            >
+              루틴 질문 만들기
+            </button>
+          </>
+        )
       case 'execution':
         return (
           <>
@@ -291,8 +317,8 @@ export function AssistantPage() {
       default:
         return (
           <>
-            <button type="button" className="filter-chip" onClick={() => handleTabChange('execution')}>
-              실행으로 이동
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('routine')}>
+              루틴으로 이동
             </button>
             <button
               type="button"
@@ -1202,6 +1228,12 @@ export function AssistantPage() {
 
   const compactStats = (() => {
     switch (activeTab) {
+      case 'routine':
+        return [
+          { label: 'Condition', value: dailyCondition ? `${dailyCondition.readinessScore}점` : '대기', detail: '오늘 컨디션 준비도' },
+          { label: 'Routine', value: dailyRoutine ? `${dailyRoutine.completedCount}/${dailyRoutine.totalCount}` : '대기', detail: '오늘 루틴 체크 수' },
+          { label: 'Recovery', value: dailyRoutine?.recoveryScore ?? '-', detail: '회복 점수' },
+        ]
       case 'execution':
         return [
           { label: 'Execution', value: executionCandidates.length, detail: '실행 후보 수' },
@@ -1376,13 +1408,13 @@ export function AssistantPage() {
           </div>
         </article>
         <article className="assistant-overview-card">
-          <span className="control-label">Condition Snapshot</span>
+          <span className="control-label">Routine Health</span>
           <strong>{dailyCondition ? `${dailyCondition.readinessScore}점` : '대기 중'}</strong>
           <p>{dailyCondition?.summary ?? '컨디션 체크인을 불러오는 중이야.'}</p>
           <div className="assistant-tags">
             {dailyCondition ? <span className="tag-chip">추세 {getConditionTrendLabel(dailyCondition.trend)}</span> : null}
-            <button type="button" className="filter-chip" onClick={() => toggleSection('condition')}>
-              {collapsedSections.condition ? '상세 열기' : '상세 닫기'}
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('routine')}>
+              루틴 탭 보기
             </button>
           </div>
         </article>
@@ -1392,8 +1424,8 @@ export function AssistantPage() {
           <p>{dailyRoutine?.insight ?? '오늘 루틴 상태를 계산하는 중이야.'}</p>
           <div className="assistant-tags">
             {dailyRoutine ? <span className="tag-chip">{getRoutineRiskLabel(dailyRoutine.riskLevel)}</span> : null}
-            <button type="button" className="filter-chip" onClick={() => toggleSection('routine')}>
-              {collapsedSections.routine ? '상세 열기' : '상세 닫기'}
+            <button type="button" className="filter-chip" onClick={() => handleTabChange('routine')}>
+              루틴 탭 보기
             </button>
           </div>
         </article>
@@ -1409,6 +1441,45 @@ export function AssistantPage() {
               아이디어 보기
             </button>
           </div>
+        </article>
+      </section>
+        </>
+      ) : null}
+
+      {activeTab === 'routine' ? (
+        <>
+      <section className="assistant-overview-grid">
+        <article className="assistant-overview-card assistant-overview-card-primary">
+          <span className="control-label">Condition Snapshot</span>
+          <strong>{dailyCondition ? `${dailyCondition.readinessScore}점` : '대기 중'}</strong>
+          <p>{dailyCondition?.summary ?? '컨디션 체크인을 불러오는 중이야.'}</p>
+          <div className="assistant-tags">
+            {dailyCondition ? <span className="tag-chip">추세 {getConditionTrendLabel(dailyCondition.trend)}</span> : null}
+            {dailyCondition?.suggestions[0] ? (
+              <button type="button" className="filter-chip" onClick={() => setQuestion(`${dailyCondition.suggestions[0]}를 기준으로 오늘 일을 어떻게 조절하면 좋을까?`)}>
+                컨디션 질문 만들기
+              </button>
+            ) : null}
+          </div>
+        </article>
+        <article className="assistant-overview-card">
+          <span className="control-label">Routine Snapshot</span>
+          <strong>{dailyRoutine ? `${dailyRoutine.completedCount}/${dailyRoutine.totalCount}` : '대기 중'}</strong>
+          <p>{dailyRoutine?.insight ?? '오늘 루틴 상태를 계산하는 중이야.'}</p>
+          <div className="assistant-tags">
+            {dailyRoutine ? <span className="tag-chip">{getRoutineRiskLabel(dailyRoutine.riskLevel)}</span> : null}
+            {topIncompleteRoutine ? <span className="tag-chip">다음 {topIncompleteRoutine.label}</span> : null}
+          </div>
+        </article>
+        <article className="assistant-overview-card">
+          <span className="control-label">Recovery Score</span>
+          <strong>{dailyRoutine?.recoveryScore ?? '-'}</strong>
+          <p>{dailyRoutine ? `${dailyRoutine.streakDays}일 연속 흐름과 수면 준비 상태를 반영한 점수야.` : '회복 점수를 계산하는 중이야.'}</p>
+        </article>
+        <article className="assistant-overview-card assistant-overview-card-accent">
+          <span className="control-label">Recovery Action</span>
+          <strong>{topIncompleteRoutine?.label ?? dailyRoutine?.suggestedActions[0] ?? '복구 액션 계산 중'}</strong>
+          <p>{dailyRoutine?.focusMode.summary ?? '누락된 루틴을 먼저 복구하면 오늘 모드가 더 안정된다.'}</p>
         </article>
       </section>
 
@@ -1727,7 +1798,11 @@ export function AssistantPage() {
           )}
         </article>
       </section>
+        </>
+      ) : null}
 
+      {activeTab === 'dashboard' ? (
+        <>
       <section className="assistant-grid">
         <article className="assistant-card">
           <div className="section-heading">
