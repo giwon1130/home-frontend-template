@@ -36,3 +36,9 @@ export async function assistantApiFetch<T>(path: string, init?: RequestInit): Pr
 
   return data
 }
+
+export async function assistantApiFetchBlob(path: string): Promise<Blob> {
+  const response = await fetch(`${ASSISTANT_BASE_URL}${path}`)
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response.blob()
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { askCopilotApi, createActionApi, createIdeaApi, getActionSummaryApi, getActionsApi, getBriefingHistoryApi, getCopilotHistoryApi, getDailyConditionApi, getDailyRoutineApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, getWeeklyReviewApi, getWeeklyReviewHistoryApi, updateActionApi, updateActionStatusApi, updateDailyConditionApi, updateDailyRoutineApi, updateIdeaApi } from '../api/assistantApi'
+import { askCopilotApi, createActionApi, createIdeaApi, getActionSummaryApi, getActionsApi, getBriefingAudioApi, getBriefingHistoryApi, getCopilotHistoryApi, getDailyConditionApi, getDailyRoutineApi, getIdeasApi, getTodayBriefingApi, getTodayCopilotApi, getTodayPlanApi, getWeeklyReviewApi, getWeeklyReviewHistoryApi, updateActionApi, updateActionStatusApi, updateDailyConditionApi, updateDailyRoutineApi, updateIdeaApi } from '../api/assistantApi'
 import type { AssistantAction, AssistantActionSummary, AssistantBriefing, AssistantBriefingHistory, AssistantCopilot, AssistantCopilotAskResponse, AssistantCopilotHistory, AssistantDailyCondition, AssistantDailyRoutine, AssistantIdea, AssistantPlan, AssistantWeeklyReview, AssistantWeeklyReviewSnapshot } from '../types/api'
 
 export function AssistantPage() {
@@ -54,6 +54,7 @@ export function AssistantPage() {
   const [editingActionDueDate, setEditingActionDueDate] = useState('')
   const [updatingRoutineKey, setUpdatingRoutineKey] = useState<string | null>(null)
   const [isUpdatingCondition, setIsUpdatingCondition] = useState(false)
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     condition: true,
     routine: true,
@@ -1054,6 +1055,27 @@ export function AssistantPage() {
       setErrorMessage('헤드라인을 아이디어로 저장하지 못했습니다.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handlePlayBriefingAudio = async () => {
+    if (isPlayingAudio) return
+    setIsPlayingAudio(true)
+    try {
+      const blob = await getBriefingAudioApi()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audio.onended = () => {
+        setIsPlayingAudio(false)
+        URL.revokeObjectURL(url)
+      }
+      audio.onerror = () => {
+        setIsPlayingAudio(false)
+        URL.revokeObjectURL(url)
+      }
+      audio.play()
+    } catch {
+      setIsPlayingAudio(false)
     }
   }
 
@@ -2166,6 +2188,15 @@ export function AssistantPage() {
               <p className="eyebrow">Morning Briefing</p>
               <h2>오늘 브리핑</h2>
             </div>
+            <button
+              type="button"
+              className="filter-chip"
+              onClick={handlePlayBriefingAudio}
+              disabled={isPlayingAudio || !briefing}
+              title="브리핑 음성 듣기"
+            >
+              {isPlayingAudio ? '재생 중...' : '▶ 음성 브리핑'}
+            </button>
           </div>
           <p className="assistant-summary">
             {briefing ? briefing.summary : isLoading ? '브리핑을 불러오는 중' : '브리핑 정보 없음'}

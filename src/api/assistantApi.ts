@@ -1,4 +1,4 @@
-import { assistantApiFetch } from './client'
+import { assistantApiFetch, assistantApiFetchBlob } from './client'
 import type {
   ApiResponse,
   AssistantBriefing,
@@ -136,4 +136,8 @@ export function updateIdeaApi(
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
+}
+
+export function getBriefingAudioApi(): Promise<Blob> {
+  return assistantApiFetchBlob('/api/v1/briefings/audio')
 }
