@@ -14,6 +14,7 @@
 - AI 비서 대시보드 페이지
 - 백엔드 `profile/projects` API 연동
 - 프로젝트 카드별 `Live / Repository / Docs` 링크 노출
+- 대표 서비스의 최신 상태를 허브 카드에 반영해 탐색 흐름 유지
 - 기존 로그인 페이지는 내부 실험용으로 유지
 
 ## Quick Start
@@ -96,3 +97,4 @@ VITE_ASSISTANT_API_BASE_URL=http://localhost:8080
 - 공개 허브가 메인이고 로그인 기능은 보조 템플릿으로 남겨둔 상태다.
 - `docker-compose.yml`은 sibling repo `../giwon-home-api`, `../giwon-assistant-api`를 기준으로 전체 스택을 함께 띄운다.
 - 이후 서비스가 늘어나도 허브는 링크/프록시 진입점 역할만 유지하는 게 기본 원칙이다.
+- 예시로 `SignalDesk`처럼 웹/API/모바일이 분리된 서비스도 허브 카드 한 장으로 연결한다.
