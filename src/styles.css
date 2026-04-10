@@ -569,6 +569,12 @@ a {
   color: #475569;
 }
 
+.assistant-news-highlight.mock-item {
+  opacity: 0.55;
+  border-style: dashed;
+  background: rgba(241, 245, 249, 0.6);
+}
+
 .assistant-stats-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -837,6 +843,26 @@ a {
   background: rgba(248, 250, 252, 0.88);
   color: #334155;
   border: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.assistant-list li.mock-item {
+  opacity: 0.55;
+  border-style: dashed;
+  background: rgba(241, 245, 249, 0.6);
+}
+
+.mock-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 .assistant-tags {

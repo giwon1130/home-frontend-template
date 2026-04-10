@@ -2171,8 +2171,11 @@ export function AssistantPage() {
             {briefing ? briefing.summary : isLoading ? '브리핑을 불러오는 중' : '브리핑 정보 없음'}
           </p>
           {leadHeadline ? (
-            <div className="assistant-news-highlight">
-              <span className="control-label">Lead Headline</span>
+            <div className={`assistant-news-highlight${leadHeadline.mock ? ' mock-item' : ''}`}>
+              <span className="control-label">
+                Lead Headline
+                {leadHeadline.mock && <span className="mock-badge">목데이터</span>}
+              </span>
               <strong>{leadHeadline.title}</strong>
               <p>{leadHeadline.source}</p>
               <div className="assistant-tags">
@@ -2192,9 +2195,12 @@ export function AssistantPage() {
               <span className="control-label">Calendar</span>
               <ul className="assistant-list">
                 {briefing?.calendar.map((item) => (
-                  <li key={`${item.time}-${item.title}`}>
+                  <li key={`${item.time}-${item.title}`} className={item.mock ? 'mock-item' : ''}>
                     <strong>{item.time}</strong>
-                    <span>{item.title}</span>
+                    <span>
+                      {item.title}
+                      {item.mock && <span className="mock-badge">목데이터</span>}
+                    </span>
                   </li>
                 )) ?? <li>일정 없음</li>}
               </ul>
@@ -2203,9 +2209,12 @@ export function AssistantPage() {
               <span className="control-label">Tasks</span>
               <ul className="assistant-list">
                 {briefing?.tasks.map((task) => (
-                  <li key={`${task.priority}-${task.title}`}>
+                  <li key={`${task.priority}-${task.title}`} className={task.mock ? 'mock-item' : ''}>
                     <strong>{task.priority}</strong>
-                    <span>{task.title}</span>
+                    <span>
+                      {task.title}
+                      {task.mock && <span className="mock-badge">목데이터</span>}
+                    </span>
                   </li>
                 )) ?? <li>할 일 없음</li>}
               </ul>
