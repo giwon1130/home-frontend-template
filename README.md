@@ -41,6 +41,7 @@ docker compose up --build
 - 현재 compose는 sibling repo `../giwon-home-api`, `../giwon-assistant-api`를 함께 띄우는 기준이다.
 - `restart: unless-stopped`와 healthcheck를 포함해 로컬/소형 서버 운영 기준으로 보강했다.
 - 공개 배포 시에는 `.env`에서 `PUBLIC_URL_*` 값을 실제 도메인으로 바꿔 허브 카드 링크를 맞춘다.
+- 자세한 절차는 [docs/deployment-playbook.md](./docs/deployment-playbook.md)에 정리했다.
 
 ## Required Backend
 - Start backend API first: `http://localhost:8081`
