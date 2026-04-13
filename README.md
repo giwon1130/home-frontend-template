@@ -39,6 +39,8 @@ docker compose up --build
 - frontend의 `/api/*` 요청은 nginx가 `giwon-home-api`로 프록시한다.
 - frontend의 `/assistant-api/*` 요청은 nginx가 `giwon-assistant-api`로 프록시한다.
 - 현재 compose는 sibling repo `../giwon-home-api`, `../giwon-assistant-api`를 함께 띄우는 기준이다.
+- `restart: unless-stopped`와 healthcheck를 포함해 로컬/소형 서버 운영 기준으로 보강했다.
+- 공개 배포 시에는 `.env`에서 `PUBLIC_URL_*` 값을 실제 도메인으로 바꿔 허브 카드 링크를 맞춘다.
 
 ## Required Backend
 - Start backend API first: `http://localhost:8081`
@@ -77,11 +79,17 @@ src
 VITE_APP_NAME=giwon-home
 VITE_API_BASE_URL=http://localhost:8081
 VITE_ASSISTANT_API_BASE_URL=http://localhost:8080
+PUBLIC_URL_HOME=http://localhost:4173
+PUBLIC_URL_ASSISTANT=http://localhost:4173/assistant
+PUBLIC_URL_HOME_HARMONY=http://127.0.0.1:4174
+PUBLIC_URL_ROUTE_OPS=http://localhost:4173
+PUBLIC_URL_SIGNAL_DESK=http://localhost:4180
 ```
 
 - 로컬 Vite 개발 서버에서는 `http://localhost:8081`을 그대로 쓴다.
 - 로컬 Vite 개발 서버에서는 `http://localhost:8080`도 함께 쓴다.
 - Docker 이미지 빌드에서는 `/api`, `/assistant-api`로 대체되어 nginx 프록시를 탄다.
+- 홈 프로젝트 카탈로그의 `liveUrl`은 `PUBLIC_URL_*` 환경변수에서 읽는다.
 
 ## Future Services
 이 허브는 서비스 자체를 한 repo에 다 넣는 구조가 아니라, 독립 서비스들을 연결하는 공개 진입점으로 쓴다.
